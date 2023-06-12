@@ -1,0 +1,3 @@
+name: SCAN
+data_dir: ./datasets/SCAN
+subset: length

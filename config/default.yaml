@@ -1,0 +1,46 @@
+defaults:
+  - _self_
+  - dataset: SCAN
+
+name: TransformerCoT
+base_dir: outputs
+exp_dir: ""
+rng_seed: 0
+mode: train
+resume: False
+num_gpu: 1
+
+logger:
+  name: "wandb"
+  entity: "qli"
+
+debug:
+  flag: False
+  debug_size: 20
+
+trainer: BaseTrainer
+
+dataloader:
+  # This is a per-gpu batchsize
+  batchsize: 32
+  num_workers: 4
+
+solver:
+  gradient_accumulation_steps: 1
+  lr: 1e-4
+  grad_norm: 5.0
+  epochs: 100
+  optim:
+    name: AdamW
+    args:
+      betas: [0.9, 0.98]
+  sched:
+    name: warmup_cosine
+    args:
+      warmup_steps: 5000
+
+model:
+  name: BaseModel
+
+
+
