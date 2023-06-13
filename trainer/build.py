@@ -1,6 +1,7 @@
 import copy as cp
 from datetime import timedelta
 from pathlib import Path
+from omegaconf import OmegaConf
 
 from accelerate import Accelerator, DistributedDataParallelKwargs
 from accelerate.logging import get_logger
@@ -27,7 +28,7 @@ class Tracker():
         self.epoch += 1
 
     def reset(self, cfg):
-        self.exp_name = f"{cfg.exp_dir.parent.name.replace(f'{cfg.name}', '').lstrip('_')}/{cfg.exp_dir.name}"
+        self.exp_name = f"{Path(cfg.exp_dir).name}"
         self.run_id = wandb.util.generate_id()
         self.epoch = 0
 
@@ -51,7 +52,6 @@ class BaseTrainer():
         # There is bug in logger setting, needs fixing from accelerate side
         self.logger = get_logger(__name__)
         self.mode = cfg.mode
-        self.need_resume = cfg.resume
 
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
         init_kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=800))
@@ -76,8 +76,8 @@ class BaseTrainer():
         self.grad_norm = cfg.solver.get("grad_norm")
 
         # Load pretrain model weights
-        self.pretrain_ckpt_path = Path(cfg.pretrain_ckpt_path)
-        if self.pretrain_ckpt_path.exists() and cfg.pretrain_ckpt_path != "":
+        if cfg.get('pretrain_ckpt_path'):
+            self.pretrain_ckpt_path = Path(cfg.pretrain_ckpt_path)
             self.load_pretrain()
 
         # Accelerator preparation
@@ -87,14 +87,14 @@ class BaseTrainer():
         self.accelerator.register_for_checkpointing(self.exp_tracker)
 
         # Check if resuming from previous checkpoint is needed
-        self.ckpt_path = Path(cfg.ckpt_path) if cfg.ckpt_path != "" else Path(cfg.exp_dir) / "ckpt" / "best.pth"
-        if self.need_resume:
+        self.ckpt_path = Path(cfg.exp_dir) / "ckpt" / "best.pth"
+        if cfg.resume:
             self.resume()
 
         # Misc
         self.accelerator.init_trackers(
                 project_name=cfg.name,
-                config={"num_epochs": cfg.solver.epochs, "batch_size": cfg.dataloader.batchsize, "lr": cfg.solver.lr},
+                config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
                 init_kwargs={
                     "wandb": {
                         "name": self.exp_tracker.exp_name, "entity": cfg.logger.entity,

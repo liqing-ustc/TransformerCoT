@@ -2,7 +2,7 @@ from fvcore.common.registry import Registry
 
 EVALUATOR_REGISTRY = Registry("evaluator")
 
-
+@EVALUATOR_REGISTRY.register()
 class BaseEvaluator():
     def __init__(self, cfg, accelerator):
         pass

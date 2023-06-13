@@ -16,11 +16,10 @@ from trainer import build_trainer
 @hydra.main(version_base=None, config_path="./config", config_name="default")
 def main(cfg):
     if not cfg.exp_dir:
-        cfg.exp_dir = Path(cfg.base_dir) / f"{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}" 
+        cfg.exp_dir = cfg.base_dir + '/' + f"{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}" 
         
-    cfg.exp_dir = Path(cfg.exp_dir)
     make_dir(cfg.exp_dir)
-    save_yaml(OmegaConf.to_yaml(cfg), cfg.exp_dir / "config.yaml")
+    OmegaConf.save(config=cfg, f=Path(cfg.exp_dir) / "config.yaml")
     trainer = build_trainer(cfg)
     trainer.run()
 
