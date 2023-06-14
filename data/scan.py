@@ -61,27 +61,27 @@ class SCAN(Dataset):
 
 
     @classmethod
-    def parse(cls, expr):
+    def parse(cls, input):
         sym2arity = cls.sym2arity
         op2precedence = cls.op2precedence
         values = []
         operators = []
         
-        head = [-1] * len(expr)
-        for (i,sym) in enumerate(expr):
+        head = [-1] * len(input)
+        for (i,sym) in enumerate(input):
             if sym2arity[sym] == 0:
                 values.append(i)
             else:
-                while len(operators) > 0 and op2precedence[expr[operators[-1]]] >= op2precedence[sym]:
+                while len(operators) > 0 and op2precedence[input[operators[-1]]] >= op2precedence[sym]:
                     op = operators.pop()
-                    for _ in range(sym2arity[expr[op]]):
+                    for _ in range(sym2arity[input[op]]):
                         head[values.pop()] = op
                     values.append(op)
                 operators.append(i)
 
         while len(operators) > 0:
             op = operators.pop()
-            for _ in range(sym2arity[expr[op]]):
+            for _ in range(sym2arity[input[op]]):
                 head[values.pop()] = op
             values.append(op)
 
@@ -99,24 +99,24 @@ class SCAN(Dataset):
         for line in lines:
             _, left, right = line.split(':')
             left = left.strip().split()[:-1]
-            left = cls.transform_expr(left)
+            left = cls.transform_input(left)
             head = cls.parse(left)
             right = right.strip().split()
-            data = {'expr': left, 'head': head, 'res': right}
+            data = {'input': left, 'head': head, 'output': right}
             dataset.append(data)
         return dataset
     
     @classmethod
-    def transform_expr(cls, expr):
+    def transform_input(cls, input):
         """ 
         opposite/around left/right -> left/right opposite/around
         this transform makes SCAN's dependency grammar projective and can be parsed by a shift-reduce parser.
         """
-        for i, w in enumerate(expr[:]):
+        for i, w in enumerate(input[:]):
             if w in cls.turn_times_word:
-                expr[i] = expr[i+1]
-                expr[i+1] = w
-        return expr
+                input[i] = input[i+1]
+                input[i+1] = w
+        return input
 
     def __init__(self, cfg, split='train'):
 
@@ -145,9 +145,7 @@ class SCAN(Dataset):
             print(f'{split}: randomly select {n_sample} samples.')
 
         for sample in dataset:
-            sample['len'] = len(sample['expr'])
-            sample['sentence'] = [self.w2i[x] for x in sample['expr']]
-            sample['res'] = tuple([self.w2i_output[x] for x in sample['res']])
+            sample['len'] = len(sample['input'])
         
         self.dataset = dataset
         self.valid_ids = list(range(len(dataset)))
@@ -169,23 +167,23 @@ class SCAN(Dataset):
     
     @classmethod
     def collate(cls, batch):
-        expr_list = []
+        input_list = []
         sentence_list = []
         head_list = []
-        res_list = []
+        output_list = []
         len_list = []
         for sample in batch:
-            expr_list.append(sample['expr'])
+            input_list.append(sample['input'])
             sentence_list.append(sample['sentence'])
             head_list.append(sample['head'])
-            res_list.append(sample['res'])
+            output_list.append(sample['output'])
             len_list.append(sample['len'])
             
         batch = {}
-        batch['expr'] = expr_list
+        batch['input'] = input_list
         batch['sentence'] = sentence_list
         batch['head'] = head_list
-        batch['res'] = res_list
+        batch['output'] = output_list
         batch['len'] = len_list
         return batch
 

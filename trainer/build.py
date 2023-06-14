@@ -2,6 +2,7 @@ import copy as cp
 from datetime import timedelta
 from pathlib import Path
 from omegaconf import OmegaConf
+from tqdm import tqdm
 
 from accelerate import Accelerator, DistributedDataParallelKwargs
 from accelerate.logging import get_logger
@@ -46,6 +47,7 @@ class BaseTrainer():
     def __init__(self, cfg):
         set_seed(cfg.rng_seed)
         self.debug = cfg.debug.flag
+        self.epochs_per_save = cfg.solver.get("epochs_per_save", None)
         
         # Initialize accelerator
         self.exp_tracker = Tracker(cfg)
@@ -66,7 +68,7 @@ class BaseTrainer():
         keys = ["train", "val", "test"]
         self.data_loaders = {key : build_dataloader(cfg, split=key) for key in keys}
         self.model = build_model(cfg)
-        self.loss, self.optimizer, self.scheduler = build_optim(cfg, self.model.get_opt_params(),
+        self.optimizer, self.scheduler = build_optim(cfg, self.model.get_opt_params(),
                                                      total_steps=len(self.data_loaders["train"]) * cfg.solver.epochs)
         self.evaluator = build_eval(cfg, self.accelerator)
 
@@ -115,15 +117,79 @@ class BaseTrainer():
         self.scheduler.step()
 
     def train_step(self, epoch):
-        raise NotImplementedError
+        self.model.train()
+        loader = self.data_loaders["train"]
+        pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process))
+        for i, data_dict in enumerate(loader):
+            with self.accelerator.accumulate(self.model):
+                data_dict['cur_step'] = epoch * len(loader) + i
+                data_dict['total_steps'] = self.total_steps
+                # forward
+                data_dict = self.forward(data_dict)
+                loss = data_dict['loss']
+                # optimize
+                self.backward(loss)
+                # calculate evaluator
+                metrics = self.evaluator.batch_metrics(data_dict)
+                # record
+                step = epoch * len(loader) + i
+                log_dict = {'step': step, 'loss': loss.item()}
+                log_dict.update(metrics)
+                self.log(log_dict, mode="train")
+                pbar.update(1)
 
-    def eval_step(self):
-        raise NotImplementedError
+    @torch.no_grad()
+    def eval_step(self, epoch):
+        self.model.eval()
+        loader = self.data_loaders["val"]
+        pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process))
+        for i, data_dict in enumerate(loader):
+            data_dict = self.forward(data_dict)
+            data_dict = {k : v for k, v in data_dict.items() if isinstance(v, torch.Tensor)}
+            data_dict = self.accelerator.gather_for_metrics(data_dict)
+            self.evaluator.update(data_dict)
+            pbar.update(1)
+        is_best, results = self.evaluator.record()
+        self.log(results, mode="val")
+        self.evaluator.reset()
+        return is_best
 
+    @torch.no_grad()
     def test_step(self):
-        raise NotImplementedError
+        self.model.eval()
+        loader = self.data_loaders["test"]
+        pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process))
+        for i, data_dict in enumerate(loader):
+            data_dict = self.forward(data_dict)
+            self.evaluator.update(data_dict)
+            pbar.update(1)
+        is_best, results = self.evaluator.record()
+        self.log(results, mode="test")
+        self.evaluator.reset()
+        return results
 
-    def log(self, results, step=0, mode="train"):
+    def run(self):
+        if self.mode == "train":
+            start_epoch = self.exp_tracker.epoch
+            for epoch in range(start_epoch, self.epochs):
+                self.exp_tracker.step()
+                self.train_step(epoch)
+
+                # if self.accelerator.is_main_process:
+                is_best = self.eval_step(epoch)
+                self.accelerator.print(f"[Epoch {epoch + 1}] finished eval, is_best: {is_best}")
+
+                self.accelerator.wait_for_everyone()
+                if self.accelerator.is_main_process:
+                    if is_best:
+                        self.save("best.pth")
+                    if self.epochs_per_save and (epoch + 1) % self.epochs_per_save == 0:
+                        self.save(f"ckpt_{epoch+1}.pth")
+        else:
+            return self.test_step()
+        self.accelerator.end_training()
+
+    def log(self, results, mode="train"):
         if not self.debug:
             log_dict = {}
             for key, val in results.items():
@@ -131,7 +197,7 @@ class BaseTrainer():
             if mode == "train":
                 lrs = self.scheduler.get_lr()
                 for i, lr in enumerate(lrs):
-                    log_dict[f"lr/group_{i}"] = lr
+                    log_dict[f"{mode}/lr/group_{i}"] = lr
             self.accelerator.log(log_dict)
 
     def save(self, name):
@@ -156,9 +222,6 @@ class BaseTrainer():
 
     def save_func(self, path):
         self.accelerator.save_state(path)
-
-    def run(self):
-        raise NotImplementedError
 
 
 def build_trainer(cfg):

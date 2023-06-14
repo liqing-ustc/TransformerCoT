@@ -1,6 +1,7 @@
 defaults:
   - _self_
   - dataset: SCAN
+  - model: GPT
 
 name: TransformerCoT
 base_dir: outputs
@@ -19,6 +20,8 @@ debug:
   debug_size: 20
 
 trainer: BaseTrainer
+
+dataset_wrapper: GPTWrapper
 
 dataloader:
   # This is a per-gpu batchsize
@@ -39,8 +42,6 @@ solver:
     args:
       warmup_steps: 5000
 
-model:
-  name: BaseModel
-
-
-
+eval:
+  name: BaseEvaluator
+  save: True

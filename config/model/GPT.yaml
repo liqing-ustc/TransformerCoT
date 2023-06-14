@@ -1,0 +1,9 @@
+name: GPT
+block_size: 1024
+vocab_size: 1024
+n_layer: 12
+n_head: 12
+n_embd: 768
+dropout: 0.0
+bias: False # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
+weight_decay: 0.01 # put weight decay here for convenience because it is not applied to all parameters
