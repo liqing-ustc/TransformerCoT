@@ -20,10 +20,19 @@ class BaseEvaluator():
         preds = torch.argmax(logits, dim=-1)
         output_ids = data_dict['output_ids']
         acc = compute_accuracy(preds, output_ids, ignore_index=-1)
-        return {'acc': acc.item(), 'count': output_ids.shape[0]}
+        return {'acc': acc.item(), 'count': len(output_ids)}
+
+    def batch_metrics_for_generation(self, data_dict):
+        preds = data_dict['preds']
+        output_ids = data_dict['output_ids_for_generation']
+        acc = compute_accuracy(torch.cat(preds), torch.cat(output_ids))
+        return {'acc': acc.item(), 'count': len(output_ids)}
 
     def update(self, data_dict):
-        metrics = self.batch_metrics(data_dict)
+        if 'preds' in data_dict.keys(): # evaluating generation
+            metrics = self.batch_metrics_for_generation(data_dict)
+        else:
+            metrics = self.batch_metrics(data_dict)
         self.total_count += metrics['count']
         for key in self.eval_dict.keys():
             self.eval_dict[key].append(float(metrics[key]) * metrics['count'])

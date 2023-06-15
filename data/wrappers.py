@@ -30,6 +30,8 @@ class GPTWrapper(Dataset):
     def collate_fn(self, batch):
         input_max_len = max([len(sample['input_ids']) for sample in batch])
         for sample in batch:
+            sample['input_ids_for_generation'] = sample['input_ids'][:len(sample['input']) + 2] # +2 for <s> and <###>: st + input + sep
+            sample['output_ids_for_generation'] = sample['input_ids'][len(sample['input']) + 2:] # output + end
             sample['output_ids'] = sample['input_ids'][1:] + [-1] * (input_max_len - len(sample['input_ids'])) # -1 for not calculating loss
             sample['input_ids'] = sample['input_ids'][:-1] + [self.w2i[self.pad_token]] * (input_max_len - len(sample['input_ids']))
 
@@ -37,6 +39,8 @@ class GPTWrapper(Dataset):
         for key in batch[0].keys():
             new_batch[key] = [sample[key] for sample in batch]
         
+        new_batch['input_ids_for_generation'] = [torch.from_numpy(np.array(x)).long() for x in new_batch['input_ids_for_generation']]
+        new_batch['output_ids_for_generation'] = [torch.from_numpy(np.array(x)).long() for x in new_batch['output_ids_for_generation']]
         new_batch['input_ids'] = torch.from_numpy(np.array(new_batch['input_ids'])).long()
         new_batch['output_ids'] = torch.from_numpy(np.array(new_batch['output_ids'])).long()
         return new_batch

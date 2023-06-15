@@ -107,7 +107,10 @@ class BaseTrainer():
             )
 
     def forward(self, data_dict):
-        return self.model(data_dict)
+        if self.model.training:
+            return self.model(data_dict)
+        else:
+            return self.model.generate(data_dict)
 
     def backward(self, loss):
         self.optimizer.zero_grad()
@@ -146,7 +149,8 @@ class BaseTrainer():
         pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process))
         for i, data_dict in enumerate(loader):
             data_dict = self.forward(data_dict)
-            data_dict = {k : v for k, v in data_dict.items() if isinstance(v, torch.Tensor)}
+            # data_dict = {k : v for k, v in data_dict.items() if isinstance(v, torch.Tensor) or 
+            #                 (isinstance(v, list) and isinstance(v[0], torch.Tensor))}
             data_dict = self.accelerator.gather_for_metrics(data_dict)
             self.evaluator.update(data_dict)
             pbar.update(1)

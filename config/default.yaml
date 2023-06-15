@@ -32,7 +32,7 @@ solver:
   gradient_accumulation_steps: 1
   lr: 1e-4
   grad_norm: 5.0
-  epochs: 10
+  epochs: 3
   optim:
     name: AdamW
     args:
