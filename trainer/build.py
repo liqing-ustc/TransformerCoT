@@ -48,6 +48,7 @@ class BaseTrainer():
         set_seed(cfg.rng_seed)
         self.debug = cfg.debug.flag
         self.epochs_per_save = cfg.solver.get("epochs_per_save", None)
+        self.global_step = 0
         
         # Initialize accelerator
         self.exp_tracker = Tracker(cfg)
@@ -132,8 +133,8 @@ class BaseTrainer():
                 # calculate evaluator
                 metrics = self.evaluator.batch_metrics(data_dict)
                 # record
-                step = epoch * len(loader) + i
-                log_dict = {'step': step, 'loss': loss.item()}
+                self.global_step += 1
+                log_dict = {'step': self.global_step, 'loss': loss.item()}
                 log_dict.update(metrics)
                 self.log(log_dict, mode="train")
                 pbar.update(1)
@@ -171,6 +172,7 @@ class BaseTrainer():
     def run(self):
         if self.mode == "train":
             start_epoch = self.exp_tracker.epoch
+            self.global_step = start_epoch * len(self.data_loaders["train"])
             for epoch in range(start_epoch, self.epochs):
                 self.exp_tracker.step()
                 self.train_step(epoch)
@@ -185,8 +187,7 @@ class BaseTrainer():
                         self.save("best.pth")
                     if self.epochs_per_save and (epoch + 1) % self.epochs_per_save == 0:
                         self.save(f"ckpt_{epoch+1}.pth")
-        else:
-            return self.test_step()
+        self.test_step()
         self.accelerator.end_training()
 
     def log(self, results, mode="train"):
@@ -198,7 +199,7 @@ class BaseTrainer():
                 lrs = self.scheduler.get_lr()
                 for i, lr in enumerate(lrs):
                     log_dict[f"{mode}/lr/group_{i}"] = lr
-            self.accelerator.log(log_dict)
+            self.accelerator.log(log_dict, step=self.global_step)
 
     def save(self, name):
         make_dir(self.ckpt_path.parent)
