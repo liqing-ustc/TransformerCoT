@@ -130,8 +130,6 @@ class BaseTrainer():
         pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process))
         for i, data_dict in enumerate(loader):
             with self.accelerator.accumulate(self.model):
-                data_dict['cur_step'] = epoch * len(loader) + i
-                data_dict['total_steps'] = self.total_steps
                 # forward
                 data_dict = self.forward(data_dict)
                 loss = data_dict['loss']
