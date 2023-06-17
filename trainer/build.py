@@ -186,7 +186,7 @@ class BaseTrainer():
 
                 if self.epochs_per_eval and (epoch + 1) % self.epochs_per_eval == 0:
                     is_best = self.eval_step(epoch)
-                    self.accelerator.print(f"[Epoch {epoch + 1}] finished eval, is_best: {is_best}")
+                    self.accelerator.print(f"[Epoch {epoch + 1}/{self.epochs}] finished eval, is_best: {is_best}")
                 else:
                     is_best = False
 

@@ -94,24 +94,11 @@ class SCAN(Dataset):
         for line in lines:
             _, left, right = line.split(':')
             left = left.strip().split()[:-1]
-            left = cls.transform_input(left)
             head = cls.parse(left)
             right = right.strip().split()
             data = {'input': left, 'head': head, 'output': right}
             dataset.append(data)
         return dataset
-    
-    @classmethod
-    def transform_input(cls, input):
-        """ 
-        opposite/around left/right -> left/right opposite/around
-        this transform makes SCAN's dependency grammar projective and can be parsed by a shift-reduce parser.
-        """
-        for i, w in enumerate(input[:]):
-            if w in cls.turn_times_word:
-                input[i] = input[i+1]
-                input[i+1] = w
-        return input
 
     def __init__(self, cfg, split='train'):
 
