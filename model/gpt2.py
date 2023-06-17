@@ -1,4 +1,7 @@
-"""GPT2 model from HuggingFace Transformers."""
+"""
+GPT2 model from HuggingFace Transformers.
+https://huggingface.co/docs/transformers/v4.30.0/en/model_doc/gpt2
+"""
 from transformers import GPT2LMHeadModel, GPT2Config
 
 from .build import MODEL_REGISTRY, BaseModel
