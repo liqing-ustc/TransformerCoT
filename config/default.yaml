@@ -1,7 +1,7 @@
 defaults:
   - _self_
   - dataset: SCAN
-  - model: GPT
+  - model: GPT2
 
 name: TransformerCoT
 base_dir: outputs
@@ -24,18 +24,20 @@ trainer: BaseTrainer
 dataset_wrapper: GPTWrapper
 
 dataloader:
-  # This is a per-gpu batchsize
-  batchsize: 128
+  # This is a per-gpu batch_size
+  batch_size: 128
   num_workers: 2
 
 solver:
   gradient_accumulation_steps: 1
-  lr: 1e-4
   grad_norm: 5.0
-  epochs: 3
+  epochs: 10
+  epochs_per_eval: 1
+  epochs_per_save: 0
   optim:
     name: AdamW
     args:
+      lr: 1e-4
       betas: [0.9, 0.98]
   sched:
     name: warmup_cosine

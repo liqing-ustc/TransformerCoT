@@ -12,27 +12,26 @@ class BaseEvaluator():
     def __init__(self, cfg, accelerator):
         self.target_metric = cfg.eval.get('target_metric', 'acc')
         self.total_count = 0
-        self.eval_dict = {self.target_metric: []}
+        self.eval_dict = {'acc': [], 'token_acc': []}
         self.best_result = -np.inf
 
     def batch_metrics(self, data_dict):
-        logits = data_dict['logits']
-        preds = torch.argmax(logits, dim=-1)
-        output_ids = data_dict['output_ids']
-        acc = compute_accuracy(preds, output_ids, ignore_index=-1)
-        return {'acc': acc.item(), 'count': len(output_ids)}
+        return {}
 
     def batch_metrics_for_generation(self, data_dict):
+        output_ids = data_dict['output_ids']
+        output_masks = data_dict['output_masks']
         preds = data_dict['preds']
-        output_ids = data_dict['output_ids_for_generation']
-        acc = compute_accuracy(torch.cat(preds), torch.cat(output_ids))
-        return {'acc': acc.item(), 'count': len(output_ids)}
+        preds = preds[:, :output_ids.shape[1]]
+        if preds.shape[1] < output_ids.shape[1]:
+            preds = torch.cat([preds, torch.zeros(preds.shape[0], output_ids.shape[1] - preds.shape[1]).long().to(preds.device)], dim=1)
+        token_result = (preds == output_ids) | (output_masks == 0)
+        token_acc = token_result[output_masks == 1].float().mean()
+        acc = token_result.all(dim=1).float().mean()
+        return {'acc': acc.item(), 'token_acc': token_acc.item(), 'count': len(output_ids)}
 
     def update(self, data_dict):
-        if 'preds' in data_dict.keys(): # evaluating generation
-            metrics = self.batch_metrics_for_generation(data_dict)
-        else:
-            metrics = self.batch_metrics(data_dict)
+        metrics = self.batch_metrics_for_generation(data_dict)
         self.total_count += metrics['count']
         for key in self.eval_dict.keys():
             self.eval_dict[key].append(float(metrics[key]) * metrics['count'])

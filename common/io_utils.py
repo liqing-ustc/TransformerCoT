@@ -9,7 +9,6 @@ import torch
 
 
 def make_dir(dir_path):
-    print('cpk dir path: ', dir_path)
     if not Path(dir_path).exists():
         print(f"Making directory: {dir_path}")
         Path(dir_path).mkdir(parents=True, exist_ok=True)

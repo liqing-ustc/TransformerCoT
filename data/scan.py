@@ -16,13 +16,8 @@ class SCAN(Dataset):
     times_word = ['twice', 'thrice']
     connect_word = ['and', 'after']
 
-    vocab = action_word + dir_word + turn_times_word + times_word + connect_word
-    i2w = vocab
-    w2i = {w: i for i, w in enumerate(vocab)}
-
+    vocab_input = action_word + dir_word + turn_times_word + times_word + connect_word
     vocab_output = ['', 'I_WALK', 'I_LOOK', 'I_RUN', 'I_JUMP', 'I_TURN_LEFT', 'I_TURN_RIGHT']
-    w2i_output = {w: i for i, w in enumerate(vocab_output)}
-
 
     op2precedence = {}
     op2precedence.update({x: 1 for x in connect_word})
@@ -163,29 +158,6 @@ class SCAN(Dataset):
         if min_len is None: min_len = -1
         if max_len is None: max_len = float('inf')
         self.valid_ids = [i for i, x in enumerate(self.dataset) if x['len'] <= max_len and x['len'] >= min_len]
-    
-    
-    @classmethod
-    def collate(cls, batch):
-        input_list = []
-        sentence_list = []
-        head_list = []
-        output_list = []
-        len_list = []
-        for sample in batch:
-            input_list.append(sample['input'])
-            sentence_list.append(sample['sentence'])
-            head_list.append(sample['head'])
-            output_list.append(sample['output'])
-            len_list.append(sample['len'])
-            
-        batch = {}
-        batch['input'] = input_list
-        batch['sentence'] = sentence_list
-        batch['head'] = head_list
-        batch['output'] = output_list
-        batch['len'] = len_list
-        return batch
 
 
 if __name__ == '__main__':

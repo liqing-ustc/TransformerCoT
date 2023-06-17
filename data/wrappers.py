@@ -1,46 +1,71 @@
-from torch.utils.data import Dataset
 from copy import deepcopy
 import numpy as np
 import torch
+from torch.utils.data import Dataset
+
+from tokenizers import Tokenizer
+from tokenizers.models import WordLevel
+from tokenizers.pre_tokenizers import Whitespace
 
 from .build import DATASETWRAPPER_REGISTRY
+
+class BaseTokenizer:
+    def __init__(self, vocab, st_token='<s>', end_token='</s>', sep_token='<###>', pad_token='<pad>'):
+        self.vocab = [pad_token, st_token, end_token, sep_token] + vocab
+        self.w2i = {w: i for i, w in enumerate(self.vocab)}
+        self.st_token = st_token
+        self.end_token = end_token
+        self.sep_token = sep_token
+        self.pad_token = pad_token
+        tokenizer = Tokenizer(WordLevel(vocab=self.w2i)) 
+        tokenizer.pre_tokenizer = Whitespace()
+        tokenizer.add_special_tokens([pad_token, st_token, end_token, sep_token])
+        self.tokenizer = tokenizer
+    
+    def encode(self, text, pad_direction='right'):
+        if isinstance(text, str):
+            text = [text]
+        self.tokenizer.enable_padding(direction=pad_direction, pad_id=self.vocab.index(self.pad_token), pad_token=self.pad_token)
+        outputs = self.tokenizer.encode_batch(text)
+        ids = torch.LongTensor([output.ids for output in outputs])
+        masks = torch.LongTensor([output.attention_mask for output in outputs])
+        max_len = len(outputs[0])
+        return max_len, ids, masks 
+
+    def decode(self, ids):
+        pass
+
 
 @DATASETWRAPPER_REGISTRY.register()
 class GPTWrapper(Dataset):
     def __init__(self, dataset):
         self.dataset = dataset
-        self.st_token = '<s>'
-        self.end_token = '</s>'
-        self.pad_token = '<pad>'
-        self.sep_token = '<###>'
-        self.vocab = dataset.vocab + dataset.vocab_output + [self.st_token, self.end_token, self.sep_token, self.pad_token]
-        self.i2w = self.vocab
-        self.w2i = {w: i for i, w in enumerate(self.vocab)}
+        self.tokenizer = BaseTokenizer(dataset.vocab_input + dataset.vocab_output)
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        sample = deepcopy(self.dataset[index])
-        input_output_concat = [self.st_token] + sample['input'] + [self.sep_token] + sample['output'] + [self.end_token]
-        input_ids = [self.w2i[w] for w in input_output_concat]
-        sample['input_ids'] = input_ids
-        return sample
+        return self.dataset[index]
 
     def collate_fn(self, batch):
-        input_max_len = max([len(sample['input_ids']) for sample in batch])
-        for sample in batch:
-            sample['input_ids_for_generation'] = sample['input_ids'][:len(sample['input']) + 2] # +2 for <s> and <###>: st + input + sep
-            sample['output_ids_for_generation'] = sample['input_ids'][len(sample['input']) + 2:] # output + end
-            sample['output_ids'] = sample['input_ids'][1:] + [-1] * (input_max_len - len(sample['input_ids'])) # -1 for not calculating loss
-            sample['input_ids'] = sample['input_ids'][:-1] + [self.w2i[self.pad_token]] * (input_max_len - len(sample['input_ids']))
+        st_token, end_token, sep_token = self.tokenizer.st_token, self.tokenizer.end_token, self.tokenizer.sep_token
+        _, concat_ids, concat_masks = self.tokenizer.encode([' '.join([st_token] + sample['input'] + [sep_token] + sample['output'] + [end_token])
+                                                for sample in batch], pad_direction='right')
+        _, input_ids, input_masks = self.tokenizer.encode([' '.join([st_token] + sample['input'] + [sep_token]) 
+                                                for sample in batch], pad_direction='left') # padding left to avoid the padding token in the middle of the sequence for generation.
+        _, output_ids, output_masks = self.tokenizer.encode([' '.join(sample['output'] + [end_token]) 
+                                                for sample in batch], pad_direction='right')
+
 
         new_batch = {}
         for key in batch[0].keys():
             new_batch[key] = [sample[key] for sample in batch]
-        
-        new_batch['input_ids_for_generation'] = [torch.from_numpy(np.array(x)).long() for x in new_batch['input_ids_for_generation']]
-        new_batch['output_ids_for_generation'] = [torch.from_numpy(np.array(x)).long() for x in new_batch['output_ids_for_generation']]
-        new_batch['input_ids'] = torch.from_numpy(np.array(new_batch['input_ids'])).long()
-        new_batch['output_ids'] = torch.from_numpy(np.array(new_batch['output_ids'])).long()
+
+        new_batch['input_ids'] = input_ids
+        new_batch['input_masks'] = input_masks
+        new_batch['output_ids'] = output_ids
+        new_batch['output_masks'] = output_masks
+        new_batch['concat_ids'] = concat_ids
+        new_batch['concat_masks'] = concat_masks
         return new_batch

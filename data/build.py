@@ -11,7 +11,7 @@ def build_dataloader(cfg, split='train'):
     dataset = build_dataset(cfg, split)
     dataset = DATASETWRAPPER_REGISTRY.get(cfg.dataset_wrapper)(dataset)
     return DataLoader(dataset,
-                        batch_size=cfg.dataloader.batchsize,
+                        batch_size=cfg.dataloader.batch_size,
                         num_workers=cfg.dataloader.num_workers,
                         collate_fn=dataset.collate_fn,
                         pin_memory=True, # TODO: Test speed

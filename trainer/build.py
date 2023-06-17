@@ -47,6 +47,7 @@ class BaseTrainer():
     def __init__(self, cfg):
         set_seed(cfg.rng_seed)
         self.debug = cfg.debug.flag
+        self.epochs_per_eval = cfg.solver.get("epochs_per_eval", None)
         self.epochs_per_save = cfg.solver.get("epochs_per_save", None)
         self.global_step = 0
         
@@ -65,9 +66,23 @@ class BaseTrainer():
             log_with=cfg.logger.name,
             kwargs_handlers=kwargs
         )
+
+        self.accelerator.init_trackers(
+                project_name=cfg.name,
+                config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
+                init_kwargs={
+                    "wandb": {
+                        "name": self.exp_tracker.exp_name, "entity": cfg.logger.entity,
+                        "id": self.exp_tracker.run_id, "resume": True
+                    }
+                }
+            )
+        print(OmegaConf.to_yaml(cfg))
             
         keys = ["train", "val", "test"]
         self.data_loaders = {key : build_dataloader(cfg, split=key) for key in keys}
+        cfg.model.vocab_size = len(self.data_loaders["train"].dataset.tokenizer.vocab)
+        self.logger.info(f"Updating vocab size: {cfg.model.vocab_size}")
         self.model = build_model(cfg)
         self.optimizer, self.scheduler = build_optim(cfg, self.model.get_opt_params(),
                                                      total_steps=len(self.data_loaders["train"]) * cfg.solver.epochs)
@@ -94,17 +109,6 @@ class BaseTrainer():
         if cfg.resume:
             self.resume()
 
-        # Misc
-        self.accelerator.init_trackers(
-                project_name=cfg.name,
-                config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
-                init_kwargs={
-                    "wandb": {
-                        "name": self.exp_tracker.exp_name, "entity": cfg.logger.entity,
-                        "id": self.exp_tracker.run_id, "resume": True
-                    }
-                }
-            )
 
     def forward(self, data_dict):
         if self.model.training:
@@ -181,9 +185,12 @@ class BaseTrainer():
                 self.exp_tracker.step()
                 self.train_step(epoch)
 
-                # if self.accelerator.is_main_process:
-                is_best = self.eval_step(epoch)
-                self.accelerator.print(f"[Epoch {epoch + 1}] finished eval, is_best: {is_best}")
+
+                if self.epochs_per_eval and (epoch + 1) % self.epochs_per_eval == 0:
+                    is_best = self.eval_step(epoch)
+                    self.accelerator.print(f"[Epoch {epoch + 1}] finished eval, is_best: {is_best}")
+                else:
+                    is_best = False
 
                 self.accelerator.wait_for_everyone()
                 if self.accelerator.is_main_process:
@@ -191,6 +198,7 @@ class BaseTrainer():
                         self.save("best.pth")
                     if self.epochs_per_save and (epoch + 1) % self.epochs_per_save == 0:
                         self.save(f"ckpt_{epoch+1}.pth")
+
         self.test_step()
         self.accelerator.end_training()
 
