@@ -9,7 +9,7 @@ def build_dataset(cfg, split='train'):
 
 def build_dataloader(cfg, split='train'):
     dataset = build_dataset(cfg, split)
-    dataset = DATASETWRAPPER_REGISTRY.get(cfg.dataset_wrapper)(dataset)
+    dataset = DATASETWRAPPER_REGISTRY.get(cfg.dataset_wrapper)(cfg, dataset)
     return DataLoader(dataset,
                         batch_size=cfg.dataloader.batch_size,
                         num_workers=cfg.dataloader.num_workers,

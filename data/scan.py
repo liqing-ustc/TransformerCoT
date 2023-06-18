@@ -4,7 +4,7 @@ import random
 from torch.utils.data import Dataset
 
 from .build import DATASET_REGISTRY
-from .helper import Program
+from .helper import Program, generate_cot
 
 @DATASET_REGISTRY.register()
 class SCAN(Dataset):
@@ -118,6 +118,9 @@ class SCAN(Dataset):
             assert False, f'Unknown split for SCAN: {subset}'
         
         dataset = self.load_data(filename)
+
+        if cfg.use_cot:
+            dataset = generate_cot(dataset, self.sym2prog, self.vocab_output)
 
         if n_sample:
             if n_sample <= 1: # it is percentage

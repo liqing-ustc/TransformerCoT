@@ -7,7 +7,7 @@ n_embd: 768
 resid_pdrop: 0
 embd_pdrop: 0
 attn_pdrop: 0
-max_length: 100 # the max length for generated sequence, including the context length
+max_length: 1024 # the max length for generated sequence, including the context length
 weight_decay: 0.01 # put weight decay here for convenience because it is not applied to all parameters
 pad_token_id: 0 # bos_token_id, eos_token id, and pad_token_id are required to be the same as in the tokenizer
 bos_token_id: 1

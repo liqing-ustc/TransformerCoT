@@ -38,9 +38,10 @@ class BaseTokenizer:
 
 @DATASETWRAPPER_REGISTRY.register()
 class GPTWrapper(Dataset):
-    def __init__(self, dataset):
+    def __init__(self, cfg, dataset):
         self.dataset = dataset
         self.tokenizer = BaseTokenizer(dataset.vocab_input + dataset.vocab_output)
+        self.use_cot = cfg.use_cot
 
     def __len__(self):
         return len(self.dataset)
@@ -50,8 +51,16 @@ class GPTWrapper(Dataset):
 
     def collate_fn(self, batch):
         st_token, end_token, sep_token = self.tokenizer.st_token, self.tokenizer.end_token, self.tokenizer.sep_token
-        _, concat_ids, concat_masks = self.tokenizer.encode([' '.join([st_token] + sample['input'] + [sep_token] + sample['output'] + [end_token])
-                                                for sample in batch], pad_direction='right')
+
+        def concat_sentence(sample):
+            sentence = [st_token] + sample['input'] 
+            if self.use_cot:
+                for thought in sample['cot']:
+                    sentence += [sep_token] + thought
+            sentence += [sep_token] + sample['output'] + [end_token]
+            return ' '.join(sentence)
+        
+        _, concat_ids, concat_masks = self.tokenizer.encode([concat_sentence(sample) for sample in batch], pad_direction='right')
         _, input_ids, input_masks = self.tokenizer.encode([' '.join([st_token] + sample['input'] + [sep_token]) 
                                                 for sample in batch], pad_direction='left') # padding left to avoid the padding token in the middle of the sequence for generation.
         _, output_ids, output_masks = self.tokenizer.encode([' '.join(sample['output'] + [end_token]) 
