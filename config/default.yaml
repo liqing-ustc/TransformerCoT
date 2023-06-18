@@ -21,7 +21,7 @@ debug:
 
 trainer: BaseTrainer
 
-use_cot: True
+use_cot: False
 dataset_wrapper: GPTWrapper
 dataloader:
   # This is a per-gpu batch_size

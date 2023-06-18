@@ -1,2 +1,2 @@
 from .build import *
-from . import gpt2
+from .hf_models import *

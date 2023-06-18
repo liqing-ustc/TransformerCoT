@@ -1,0 +1,17 @@
+name: TransfoXL
+vocab_size: 1024
+n_positions: 1024
+n_layer: 3
+n_head: 3
+d_model: 768
+d_embd: 768
+d_inner: 3072
+dropout: 0
+dropatt: 0
+div_val: 1 # set to 1 for not using adaptive input and softmax
+cutoffs: []
+max_length: 1024 # the max length for generated sequence, including the context length
+weight_decay: 0.01 # put weight decay here for convenience because it is not applied to all parameters
+pad_token_id: 0 # bos_token_id, eos_token id, and pad_token_id are required to be the same as in the tokenizer
+bos_token_id: 1
+eos_token_id: 2 
