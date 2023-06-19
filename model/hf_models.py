@@ -1,4 +1,7 @@
-"""This module contains models from HuggingFace's transformers library."""
+"""
+This module contains models from HuggingFace's transformers library.
+https://huggingface.co/docs/transformers/model_doc
+"""
 from .build import MODEL_REGISTRY, BaseModel
 
 class HFModel(BaseModel):
@@ -85,3 +88,10 @@ class TransfoXL(HFModel):
         outputs = self.model.generate(input_ids=ids, max_length=self.config.max_length)
         data_dict['preds'] = outputs[:, ids.shape[1]:] # remove input
         return data_dict
+
+from transformers import RobertaForCausalLM, RobertaConfig
+@MODEL_REGISTRY.register()
+class Roberta(HFModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.model = RobertaForCausalLM(RobertaConfig(**self.config))
