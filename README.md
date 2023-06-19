@@ -79,6 +79,6 @@ If you want to dive deep into how existing modules/models/pipelines are implemen
     wandb init
     # Follow instruction following this command to sign in
     ...
-    # Direct wandb to your account's logging page by changing logger.entity in configs
-    python run.py logger.entity=<YOUR_WANDB_USERNAME>
+    # run command
+    python run.py 
     ```

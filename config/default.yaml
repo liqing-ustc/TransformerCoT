@@ -13,7 +13,6 @@ num_gpu: 1
 
 logger:
   name: "wandb"
-  entity: "qli"
 
 debug:
   flag: False
