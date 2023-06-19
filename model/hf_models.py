@@ -95,3 +95,10 @@ class Roberta(HFModel):
     def __init__(self, config):
         super().__init__(config)
         self.model = RobertaForCausalLM(RobertaConfig(**self.config))
+
+from transformers import RobertaPreLayerNormForCausalLM, RobertaPreLayerNormConfig
+@MODEL_REGISTRY.register()
+class RobertaPreLayerNorm(HFModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.model = RobertaPreLayerNormForCausalLM(RobertaPreLayerNormConfig(**self.config))
