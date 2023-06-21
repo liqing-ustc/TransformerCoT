@@ -10,16 +10,16 @@ from tokenizers.pre_tokenizers import Whitespace
 from .build import DATASETWRAPPER_REGISTRY
 
 class BaseTokenizer:
-    def __init__(self, vocab, st_token='<s>', end_token='</s>', sep_token='<###>', pad_token='<pad>'):
-        self.vocab = [pad_token, st_token, end_token, sep_token] + vocab
+    def __init__(self, vocab, bos_token='<s>', eos_token='</s>', sep_token='<###>', pad_token='<pad>'):
+        self.vocab = [pad_token, bos_token, eos_token, sep_token] + vocab
         self.w2i = {w: i for i, w in enumerate(self.vocab)}
-        self.st_token = st_token
-        self.end_token = end_token
+        self.bos_token = bos_token
+        self.eos_token = eos_token
         self.sep_token = sep_token
         self.pad_token = pad_token
         tokenizer = Tokenizer(WordLevel(vocab=self.w2i)) 
         tokenizer.pre_tokenizer = Whitespace()
-        tokenizer.add_special_tokens([pad_token, st_token, end_token, sep_token])
+        tokenizer.add_special_tokens([pad_token, bos_token, eos_token, sep_token])
         self.tokenizer = tokenizer
     
     def encode(self, text, pad_direction='right'):
@@ -50,20 +50,20 @@ class GPTWrapper(Dataset):
         return self.dataset[index]
 
     def collate_fn(self, batch):
-        st_token, end_token, sep_token = self.tokenizer.st_token, self.tokenizer.end_token, self.tokenizer.sep_token
+        bos_token, eos_token, sep_token = self.tokenizer.bos_token, self.tokenizer.eos_token, self.tokenizer.sep_token
 
         def concat_sentence(sample):
-            sentence = [st_token] + sample['input'] 
+            sentence = [bos_token] + sample['input'] 
             if self.use_cot:
                 for thought in sample['cot']:
                     sentence += [sep_token] + thought
-            sentence += [sep_token] + sample['output'] + [end_token]
+            sentence += [sep_token] + sample['output'] + [eos_token]
             return ' '.join(sentence)
         
         _, concat_ids, concat_masks = self.tokenizer.encode([concat_sentence(sample) for sample in batch], pad_direction='right')
-        _, input_ids, input_masks = self.tokenizer.encode([' '.join([st_token] + sample['input'] + [sep_token]) 
+        _, input_ids, input_masks = self.tokenizer.encode([' '.join([bos_token] + sample['input'] + [sep_token]) 
                                                 for sample in batch], pad_direction='left') # padding left to avoid the padding token in the middle of the sequence for generation.
-        _, output_ids, output_masks = self.tokenizer.encode([' '.join(sample['output'] + [end_token]) 
+        _, output_ids, output_masks = self.tokenizer.encode([' '.join(sample['output'] + [eos_token]) 
                                                 for sample in batch], pad_direction='right')
 
 
