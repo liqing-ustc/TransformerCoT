@@ -1,7 +1,7 @@
 defaults:
   - _self_
   - dataset: SCAN
-  - model: GPT2
+  - model: Roberta
 
 name: TransformerCoT
 base_dir: outputs

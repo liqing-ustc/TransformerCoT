@@ -127,7 +127,7 @@ class BaseTrainer():
     def train_step(self, epoch):
         self.model.train()
         loader = self.data_loaders["train"]
-        pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process))
+        pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process), desc=f"[Epoch {epoch + 1}/{self.epochs}]")
         for i, data_dict in enumerate(loader):
             with self.accelerator.accumulate(self.model):
                 # forward
@@ -182,7 +182,6 @@ class BaseTrainer():
             for epoch in range(start_epoch, self.epochs):
                 self.exp_tracker.step()
                 self.train_step(epoch)
-
 
                 if self.epochs_per_eval and (epoch + 1) % self.epochs_per_eval == 0:
                     is_best = self.eval_step(epoch)

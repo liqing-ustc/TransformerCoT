@@ -16,7 +16,7 @@ class HFModel(BaseModel):
         ids, masks = data_dict['concat_ids'], data_dict['concat_masks']
         labels = ids.clone()
         labels[masks == 0] = -100 # ignore loss for padding tokens
-        outputs = self.model(ids, attention_mask=masks, labels=labels)
+        outputs = self.model(input_ids=ids, attention_mask=masks, labels=labels)
         data_dict['loss'] = outputs.loss
         data_dict['logits'] = outputs.logits
         return data_dict
@@ -89,16 +89,10 @@ class TransfoXL(HFModel):
         data_dict['preds'] = outputs[:, ids.shape[1]:] # remove input
         return data_dict
 
-from transformers import RobertaForCausalLM, RobertaConfig
+from transformers import RobertaConfig
+from .roberta import RobertaForCausalLM
 @MODEL_REGISTRY.register()
 class Roberta(HFModel):
     def __init__(self, config):
         super().__init__(config)
         self.model = RobertaForCausalLM(RobertaConfig(**self.config))
-
-from transformers import RobertaPreLayerNormForCausalLM, RobertaPreLayerNormConfig
-@MODEL_REGISTRY.register()
-class RobertaPreLayerNorm(HFModel):
-    def __init__(self, config):
-        super().__init__(config)
-        self.model = RobertaPreLayerNormForCausalLM(RobertaPreLayerNormConfig(**self.config))
