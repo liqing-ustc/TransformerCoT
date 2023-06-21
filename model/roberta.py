@@ -4,9 +4,9 @@ See https://github.com/huggingface/transformers/blob/v4.30.0/src/transformers/mo
 The original implementation is problematic when using the model for generation.
 """""
 import torch
-import transformers
+from . import modeling_roberta
 
-class RobertaForCausalLM(transformers.RobertaForCausalLM):
+class RobertaForCausalLM(modeling_roberta.RobertaForCausalLM):
 
     def forward(self, **kwargs):
         position_ids = kwargs.get("position_ids", None)
