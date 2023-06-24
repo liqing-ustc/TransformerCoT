@@ -3,6 +3,7 @@ position_embedding_type: absolute
 is_decoder: True
 vocab_size: 1024
 max_position_embeddings: 1024
+distance_clip: 10 # used for relative position embedding to clip the relative distance
 num_hidden_layers: 3
 num_attention_heads: 3
 hidden_size: 768
@@ -13,4 +14,4 @@ max_length: 1024 # the max length for generated sequence, including the context 
 weight_decay: 0.01 # put weight decay here for convenience because it is not applied to all parameters
 pad_token_id: 0 # bos_token_id, eos_token id, and pad_token_id are required to be the same as in the tokenizer
 bos_token_id: 1
-eos_token_id: 2 
+eos_token_id: 2
