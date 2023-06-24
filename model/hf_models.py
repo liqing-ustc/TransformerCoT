@@ -89,8 +89,7 @@ class TransfoXL(HFModel):
         data_dict['preds'] = outputs[:, ids.shape[1]:] # remove input
         return data_dict
 
-from transformers import RobertaConfig
-from .roberta import RobertaForCausalLM
+from .modeling_roberta import RobertaForCausalLM, RobertaConfig
 @MODEL_REGISTRY.register()
 class Roberta(HFModel):
     def __init__(self, config):

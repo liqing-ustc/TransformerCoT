@@ -1,20 +1,6 @@
-
 # coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
-# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""PyTorch RoBERTa model."""
+"""PyTorch RoBERTa model. 
+Adapted from https://github.com/huggingface/transformers/blob/v4.30.0/src/transformers/models/roberta/modeling_roberta.py"""
 
 from transformers.models.roberta.modeling_roberta import *
 
@@ -816,6 +802,12 @@ class RobertaModel(RobertaPreTrainedModel):
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
+        if position_ids is None:
+            # Rewrite the Roberta model to input correct position_ids and it only affects the absolute position embedding.
+            # See https://github.com/huggingface/transformers/blob/v4.30.0/src/transformers/models/roberta/modeling_roberta.py#L1575 for the original implementation.
+            # The original implementation is problematic when using the model for generation.
+            position_ids = torch.arange(past_key_values_length, input_shape[-1] + past_key_values_length, dtype=torch.long, device=device)
+            position_ids = position_ids.unsqueeze(0).view(-1, input_shape[-1])
         embedding_output = self.embeddings(
             input_ids=input_ids,
             position_ids=position_ids,
@@ -990,6 +982,15 @@ class RobertaForCausalLM(RobertaPreTrainedModel):
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, **model_kwargs):
         input_shape = input_ids.shape
+
+        position_ids = model_kwargs.get("position_ids", None)
+        if attention_mask is not None and position_ids is None:
+            # create position_ids on the fly for batch generation
+            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids.masked_fill_(attention_mask == 0, 0)
+            if past_key_values:
+                position_ids = position_ids[:, -1].unsqueeze(-1)
+
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:
             attention_mask = input_ids.new_ones(input_shape)
@@ -998,7 +999,7 @@ class RobertaForCausalLM(RobertaPreTrainedModel):
         if past_key_values is not None:
             input_ids = input_ids[:, -1:]
 
-        return {"input_ids": input_ids, "attention_mask": attention_mask, "past_key_values": past_key_values}
+        return {"input_ids": input_ids, "attention_mask": attention_mask, "past_key_values": past_key_values, 'position_ids': position_ids}
 
     def _reorder_cache(self, past_key_values, beam_idx):
         reordered_past = ()
