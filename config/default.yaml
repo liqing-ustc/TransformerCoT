@@ -5,10 +5,10 @@ defaults:
 
 name: TransformerCoT
 base_dir: outputs
-exp_dir: ""
+exp_dir: "outputs/2023-06-27-08:34:14"
 rng_seed: 0
 mode: train
-resume: False
+resume: True
 num_gpu: 1
 
 logger:
@@ -20,7 +20,7 @@ debug:
 
 trainer: BaseTrainer
 
-use_cot: False
+use_cot: True
 dataset_wrapper: GPTWrapper
 dataloader:
   # This is a per-gpu batch_size
@@ -30,8 +30,8 @@ dataloader:
 solver:
   gradient_accumulation_steps: 1
   grad_norm: 5.0
-  epochs: 10
-  epochs_per_eval: 0
+  epochs: 0
+  epochs_per_eval: 10
   epochs_per_save: 0
   optim:
     name: AdamW

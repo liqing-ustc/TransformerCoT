@@ -16,11 +16,23 @@ from data import build_dataloader
 from model import build_model
 from optim import build_optim
 from eval import build_eval
-
+import pickle
+import json
+import yaml
 
 TRAINER_REGISTRY = Registry("trainer")
+def append_return(lst,eme):
+    l = lst.copy()
+    l.append(eme)
+    return l
 
 
+def dump_to_yaml(data, filename):
+    with open(filename, 'w') as file:
+        for item in data:
+            for key, value in item.items():
+                file.write(f"{key}: {value}\n")
+            file.write("\n")
 class Tracker():
     def __init__(self, cfg):
         self.reset(cfg)
@@ -105,6 +117,7 @@ class BaseTrainer():
         self.accelerator.register_for_checkpointing(self.exp_tracker)
 
         # Check if resuming from previous checkpoint is needed
+        # self.ckpt_path = '/home/l/Downloads/TransformerCoT/outputs/2023-06-27-08:34:14/ckpt/best.pth'
         self.ckpt_path = Path(cfg.exp_dir) / "ckpt" / "best.pth"
         if cfg.resume:
             self.resume()
@@ -161,16 +174,35 @@ class BaseTrainer():
         self.evaluator.reset()
         return is_best
 
-    @torch.no_grad()
+
+
     def test_step(self):
         self.model.eval()
+        with open('tokenizer.pkl','rb') as f:
+            tokenizer = pickle.load(f)
         loader = self.data_loaders["test"]
         pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process))
+        data_list = []
         for i, data_dict in enumerate(loader):
             data_dict = self.forward(data_dict)
+            decoded_text = tokenizer.decode(data_dict['preds'])
+
+            # Calculate the match between cot and preds
+            is_match = [True if append_return(cot,out) == pred else False for cot,out, pred in zip(data_dict['cot'], data_dict['output'], decoded_text)]
+            output_is_match= [True if append_return(cot,out)[-1] == pred[-1] else False for cot,out, pred in zip(data_dict['cot'], data_dict['output'], decoded_text)]
+
+            data_dict['preds_text'] = decoded_text
+            data_dict['match'] = is_match
+            data_dict['output_match'] = output_is_match
+
+            data = [{'input': inp, 'output': out,'cot': append_return(cot,out), 'pot': pre, 'cot_match': match, 'output_match': output_is_match} for inp, out,cot, pre, match, output_is_match in zip(data_dict['input'], data_dict['output'],data_dict['cot'],data_dict['preds_text'], data_dict['match'], data_dict['output_match'])]
+
+            data_list+=data
             self.evaluator.update(data_dict)
             pbar.update(1)
+        dump_to_yaml(data_list, 'Visualization.yaml')
         is_best, results = self.evaluator.record()
+
         self.log(results, mode="test")
         self.evaluator.reset()
         return results
@@ -223,6 +255,7 @@ class BaseTrainer():
             print(f"Successfully resumed from {self.ckpt_path}")
         else:
             self.logger.info("training from scratch")
+            print("training from scratch")
 
     def load_pretrain(self):
         self.logger.info(f"Loading pretrained weights from {str(self.pretrain_ckpt_path)}")

@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import Whitespace
-
+import pickle
 from .build import DATASETWRAPPER_REGISTRY
 
 class BaseTokenizer:
@@ -33,7 +33,21 @@ class BaseTokenizer:
         return max_len, ids, masks 
 
     def decode(self, ids):
-        pass
+        if isinstance(ids, torch.Tensor):
+            ids = ids.tolist()
+        text_list = []
+        for id_seq in ids:
+            groups = []
+            sentence = []
+            for i in id_seq:
+                if self.vocab[i] == self.sep_token or self.vocab[i] ==self.eos_token:
+                    groups.append(sentence)
+                    sentence = []
+                else:
+                    sentence.append(self.vocab[i])
+
+            text_list.append(groups)
+        return text_list
 
 
 @DATASETWRAPPER_REGISTRY.register()
@@ -42,6 +56,8 @@ class GPTWrapper(Dataset):
         self.dataset = dataset
         self.tokenizer = BaseTokenizer(dataset.vocab_input + dataset.vocab_output)
         self.use_cot = cfg.use_cot
+        with open('tokenizer.pkl','wb') as f:
+            pickle.dump(self.tokenizer,f)
 
     def __len__(self):
         return len(self.dataset)

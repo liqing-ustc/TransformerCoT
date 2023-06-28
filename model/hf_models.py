@@ -3,6 +3,7 @@ This module contains models from HuggingFace's transformers library.
 https://huggingface.co/docs/transformers/model_doc
 """
 from .build import MODEL_REGISTRY, BaseModel
+import pickle
 
 class HFModel(BaseModel):
     def __init__(self, config):
@@ -25,6 +26,10 @@ class HFModel(BaseModel):
         ids, masks = data_dict['input_ids'], data_dict['input_masks']
         outputs = self.model.generate(input_ids=ids, attention_mask=masks, max_length=self.config.max_length)
         data_dict['preds'] = outputs[:, ids.shape[1]:] # remove input
+        # data_dict['preds'] = outputs
+        # with open('tokenizer.pkl','rb') as f:
+        #     tokenizer = pickle.load(f)
+        # decoded_text = tokenizer.decode(data_dict['preds'])
         return data_dict
 
 
