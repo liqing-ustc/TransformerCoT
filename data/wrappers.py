@@ -6,7 +6,6 @@ from torch.utils.data import Dataset
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import Whitespace
-import pickle
 from .build import DATASETWRAPPER_REGISTRY
 
 class BaseTokenizer:
@@ -56,8 +55,6 @@ class GPTWrapper(Dataset):
         self.dataset = dataset
         self.tokenizer = BaseTokenizer(dataset.vocab_input + dataset.vocab_output)
         self.use_cot = cfg.use_cot
-        with open('tokenizer.pkl','wb') as f:
-            pickle.dump(self.tokenizer,f)
 
     def __len__(self):
         return len(self.dataset)

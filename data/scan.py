@@ -99,11 +99,48 @@ class SCAN(Dataset):
             data = {'input': left, 'head': head, 'output': right}
             dataset.append(data)
         return dataset
+    @classmethod
+    def split_datasets_by_length(cls,filetrain, filetest, split_length):
+        # load dataset
+        def read_dataset(file_path):
+            with open(file_path, 'r') as file:
+                lines = file.readlines()
+
+            dataset = []
+            for line in lines:
+                in_sentence, out_sentence = line.split(' OUT: ')
+                in_sentence = in_sentence[4:]  # remove "IN: "
+
+                out_length = len(out_sentence.split())
+                dataset.append((in_sentence.strip(), out_sentence.strip(), out_length))
+
+            return dataset
+
+        def write_dataset(file_path, dataset):
+            with open(file_path, 'w') as file:
+                for item in dataset:
+                    file.write(f'IN: {item[0]} OUT: {item[1]}\n')
+
+        train_dataset = read_dataset(filetrain)
+        test_dataset = read_dataset(filetest)
+        all_data = train_dataset + test_dataset
+
+        # sort the data according to the length of the out
+        all_data.sort(key=lambda x: x[2])
+
+        # divide training sets and test sets according to the length of the specified OUT
+        new_train_dataset = [item for item in all_data if item[2] <= split_length]
+        new_test_dataset = [item for item in all_data if item[2] > split_length]
+
+        write_dataset(filetrain, new_train_dataset)
+        write_dataset(filetest, new_test_dataset)
 
     def __init__(self, cfg, split='train'):
 
         subset = getattr(cfg.dataset, 'subset', 'length')
         n_sample = getattr(cfg.dataset, 'n_sample', None)
+        if subset == 'length' and split=='train':
+            self.split_datasets_by_length(f'{cfg.dataset.data_dir}/{subset}_split/tasks_train_{subset}.txt', f'{cfg.dataset.data_dir}/{subset}_split/tasks_test_{subset}.txt', cfg.dataset.length_split)
         assert split in ['train', 'val', 'test']
         split = 'test' if split == 'val' else split # there is no val split for scan
         if subset in ['simple', 'length']:
