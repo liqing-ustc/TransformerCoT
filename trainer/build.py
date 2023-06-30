@@ -17,7 +17,6 @@ from model import build_model
 from optim import build_optim
 from eval import build_eval
 
-
 TRAINER_REGISTRY = Registry("trainer")
 
 def append_return(lst,eme):
@@ -120,7 +119,6 @@ class BaseTrainer():
         if cfg.resume:
             self.resume()
 
-
     def forward(self, data_dict):
         if self.model.training:
             return self.model(data_dict)
@@ -171,6 +169,7 @@ class BaseTrainer():
         self.log(results, mode="val")
         self.evaluator.reset()
         return is_best
+
 
     @torch.no_grad()
     def test_step(self):

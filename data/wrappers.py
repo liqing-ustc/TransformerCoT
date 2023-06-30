@@ -6,7 +6,6 @@ from torch.utils.data import Dataset
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import Whitespace
-
 from .build import DATASETWRAPPER_REGISTRY
 
 class BaseTokenizer:
