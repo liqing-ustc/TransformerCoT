@@ -5,4 +5,5 @@ python run.py -m \
     dataset.subset=length \
     model.position_embedding_type=relative_key \
     model.distance_clip=10 \
-    solver.epochs_per_eval=10 solver.epochs=100
+    solver.epochs_per_eval=10 solver.epochs=100\
+    dataset.length_split=22 \

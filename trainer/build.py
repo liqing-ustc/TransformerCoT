@@ -196,8 +196,8 @@ class BaseTrainer():
             data_dict['output_match'] = output_is_match
             if cot_values != []:
                 data = [{'input': inp, 'output': out,'cot': append_return(cot,out), 'pot': pre, 'cot_match': match, 'output_match': output_is_match} for inp, out,cot, pre, match, output_is_match in zip(data_dict['input'], data_dict['output'],cot_values,data_dict['preds_text'], data_dict['match'], data_dict['output_match'])]
-            else:
-                data = [{'input': inp, 'output': out, 'pot': pre,  'output_match': output_is_match} for inp, out, pre, output_is_match in zip(data_dict['input'], data_dict['output'],data_dict['preds_text'], data_dict['output_match'])]
+            else: # use predot to align to the output
+                data = [{'input': inp, 'output': out, 'predot': pre[0],  'output_match': output_is_match} for inp, out, pre, output_is_match in zip(data_dict['input'], data_dict['output'],data_dict['preds_text'], data_dict['output_match'])]
             data_list+=data
             self.evaluator.update(data_dict)
             pbar.update(1)
