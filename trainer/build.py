@@ -20,6 +20,17 @@ from eval import build_eval
 
 TRAINER_REGISTRY = Registry("trainer")
 
+def append_return(lst,eme):
+    l = lst.copy()
+    l.append(eme)
+    return l
+
+def dump_to_yaml(data, filename):
+    with open(filename, 'w') as file:
+        for item in data:
+            for key, value in item.items():
+                file.write(f"{key}: {value}\n")
+            file.write("\n")
 
 class Tracker():
     def __init__(self, cfg):
@@ -166,11 +177,34 @@ class BaseTrainer():
         self.model.eval()
         loader = self.data_loaders["test"]
         pbar = tqdm(range(len(loader)), disable=(not self.accelerator.is_main_process))
+        data_list = []
         for i, data_dict in enumerate(loader):
             data_dict = self.forward(data_dict)
+            decoded_text = loader.dataset.tokenizer.decode(data_dict['preds'])
+
+            # Check if 'cot' exists in data_dict, if not, set a default value of an empty list
+            cot_values = data_dict.get('cot', [])
+            if cot_values != []:
+                # Calculate the match between cot and preds
+                is_match = [True if append_return(cot,out) == pred else False for cot,out, pred in zip(cot_values, data_dict['output'], decoded_text)]
+                output_is_match= [True if append_return(cot,out)[-1] == (pred[-1] if pred else None) else False for cot,out, pred in zip(cot_values, data_dict['output'], decoded_text)]
+            else:
+                output_is_match = [True if out == (pred[-1] if pred else None) else False for out, pred in zip(data_dict['output'], decoded_text)]
+                is_match = output_is_match
+            data_dict['preds_text'] = decoded_text
+            data_dict['match'] = is_match
+            data_dict['output_match'] = output_is_match
+            if cot_values != []:
+                data = [{'input': inp, 'output': out,'cot': append_return(cot,out), 'pot': pre, 'cot_match': match, 'output_match': output_is_match} for inp, out,cot, pre, match, output_is_match in zip(data_dict['input'], data_dict['output'],cot_values,data_dict['preds_text'], data_dict['match'], data_dict['output_match'])]
+            else: # use predot to align to the output
+                data = [{'input': inp, 'output': out, 'predot': pre[0],  'output_match': output_is_match} for inp, out, pre, output_is_match in zip(data_dict['input'], data_dict['output'],data_dict['preds_text'], data_dict['output_match'])]
+            data_list+=data
             self.evaluator.update(data_dict)
             pbar.update(1)
+
+        dump_to_yaml(data_list, 'Visualization.yaml')
         is_best, results = self.evaluator.record()
+
         self.log(results, mode="test")
         self.evaluator.reset()
         return results
