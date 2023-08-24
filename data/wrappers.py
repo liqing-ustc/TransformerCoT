@@ -6,6 +6,7 @@ from torch.utils.data import Dataset
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import Whitespace
+from transformers import T5Tokenizer
 
 from .build import DATASETWRAPPER_REGISTRY
 
@@ -78,3 +79,55 @@ class GPTWrapper(Dataset):
         new_batch['concat_ids'] = concat_ids
         new_batch['concat_masks'] = concat_masks
         return new_batch
+
+
+@DATASETWRAPPER_REGISTRY.register()
+class T5Wrapper(Dataset):
+    def __init__(self, cfg, dataset):
+        self.dataset = dataset
+        self.tokenizer = T5Tokenizer.from_pretrained("t5-small")
+        self.use_cot = cfg.use_cot
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        return self.dataset[index]
+
+    def collate_fn(self, batch):
+        max_source_length = 1000
+        max_target_length = 1000
+        task_prefix = "translate instruction to actions: "
+        
+        input_sequences = [task_prefix + ' '.join(sample['input']) for sample in batch]
+        encoding = self.tokenizer(
+            input_sequences,
+            padding="longest",
+            max_length=max_source_length,
+            truncation=True,
+            return_tensors="pt",
+        )
+        input_ids, input_masks = encoding.input_ids, encoding.attention_mask
+
+        output_sequences = [' '.join(sample['output']) for sample in batch]
+        target_encoding = self.tokenizer(
+            output_sequences,
+            padding="longest",
+            max_length=max_target_length,
+            truncation=True,
+            return_tensors="pt",
+        )
+        output_ids, output_masks = target_encoding.input_ids, target_encoding.attention_mask
+        output_ids[output_ids == self.tokenizer.pad_token_id] = -100
+
+
+        new_batch = {}
+        for key in batch[0].keys():
+            new_batch[key] = [sample[key] for sample in batch]
+
+        new_batch['input_ids'] = input_ids
+        new_batch['input_masks'] = input_masks
+        new_batch['output_ids'] = output_ids
+        new_batch['output_masks'] = output_masks
+        return new_batch
+

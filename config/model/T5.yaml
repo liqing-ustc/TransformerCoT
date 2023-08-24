@@ -1,0 +1,4 @@
+name: T5
+variant: t5-small
+weight_decay: 0.01
+max_new_tokens: 1024 # the max length for generated output sequence

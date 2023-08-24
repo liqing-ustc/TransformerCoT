@@ -22,16 +22,11 @@ class BaseEvaluator():
         output_ids = data_dict['output_ids']
         output_masks = data_dict['output_masks']
 
-        preds = torch.zeros_like(output_ids)
-        sep_token_id = 3 # TODO: Hardcoded
-        for i, pred in enumerate(data_dict['preds']):
-            sep_pos_list = (pred == sep_token_id).nonzero(as_tuple=True)[0]
-            last_sep_pos = -1 if len(sep_pos_list) == 0 else sep_pos_list[-1]
-            pred = pred[last_sep_pos + 1:] # only keep the final result
-            if len(pred) < preds.shape[1]:
-                preds[i][:len(pred)] = pred
-            else:
-                preds[i] = pred[:preds.shape[1]]
+        preds = data_dict['preds']
+        if preds.shape[1] > output_ids.shape[1]:
+            preds = preds[:, :output_ids.shape[1]]
+        else: # padding preds to the same length as output_ids
+            preds = torch.cat([preds, torch.zeros_like(output_ids)[:, preds.shape[1]:]], dim=1)
 
         token_result = (preds == output_ids) | (output_masks == 0)
         token_acc = token_result[output_masks == 1].float().mean()

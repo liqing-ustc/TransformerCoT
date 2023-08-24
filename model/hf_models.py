@@ -89,9 +89,34 @@ class TransfoXL(HFModel):
         data_dict['preds'] = outputs[:, ids.shape[1]:] # remove input
         return data_dict
 
+
 from .modeling_roberta import RobertaForCausalLM, RobertaConfig
 @MODEL_REGISTRY.register()
 class Roberta(HFModel):
     def __init__(self, config):
         super().__init__(config)
         self.model = RobertaForCausalLM(RobertaConfig(**self.config))
+
+
+from transformers import T5ForConditionalGeneration, T5Config
+@MODEL_REGISTRY.register()
+class T5(HFModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.model = T5ForConditionalGeneration.from_pretrained(self.config.variant)
+        self.model.config.update(self.config)
+
+    def forward(self, data_dict):
+        ids, masks = data_dict['input_ids'], data_dict['input_masks']
+        labels, output_masks = data_dict['output_ids'], data_dict['output_masks']
+        labels[output_masks == 0] = -100 # ignore loss for padding tokens
+        outputs = self.model(input_ids=ids, attention_mask=masks, labels=labels)
+        data_dict['loss'] = outputs.loss
+        data_dict['logits'] = outputs.logits
+        return data_dict
+
+    def generate(self, data_dict):
+        ids, masks = data_dict['input_ids'], data_dict['input_masks']
+        outputs = self.model.generate(input_ids=ids, attention_mask=masks, do_sample = False)
+        data_dict['preds'] = outputs[:, 1:] # remove the decoder start token for T5 generation output.
+        return data_dict
