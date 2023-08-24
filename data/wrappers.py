@@ -109,7 +109,20 @@ class T5Wrapper(Dataset):
         )
         input_ids, input_masks = encoding.input_ids, encoding.attention_mask
 
-        output_sequences = [' '.join(sample['output']) for sample in batch]
+        if self.use_cot:
+            output_sequences = []
+            delimiter = ' ; '
+            for sample in batch:
+                output = 'Tree: ' + sample['tree']
+                output += delimiter
+                output += 'Steps: ' + ' , '.join([f'{i} = {o}' for i, o in sample['reasoning_steps']])
+                output += delimiter
+                output += 'Results: ' + ' , '.join([f'{i} = {o}' for i, o in sample['reasoning_results']])
+                output += delimiter
+                output += 'Output: ' + ' '.join(sample['output'])
+                output_sequences.append(output)
+        else:
+            output_sequences = [' '.join(sample['output']) for sample in batch]
         target_encoding = self.tokenizer(
             output_sequences,
             padding="longest",

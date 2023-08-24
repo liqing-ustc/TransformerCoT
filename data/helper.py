@@ -1,6 +1,7 @@
 from inspect import signature
 from copy import deepcopy
 from tqdm import tqdm
+import nltk
 
 EMPTY_VALUE = -1
 MISSING_VALUE = -2
@@ -104,3 +105,36 @@ def generate_cot(dataset, sym2prog, vocab_output):
         cot = cot[:-1] # remove the last one
         sample['cot'] = cot
     return dataset
+
+def index_tree(tree):
+    index = 0
+    def index_nonterminals(tree):
+        """
+        Recursively add indices to non-terminal nodes of the tree.
+        """
+        nonlocal index
+        if isinstance(tree, nltk.Tree):
+            # Update the label of non-terminal node with index
+            for child in tree:
+                index_nonterminals(child)
+            tree.set_label(tree.label() + f"_{index}")
+            index += 1
+    
+    index_nonterminals(tree)
+    return tree
+
+def tree2postfix(t):
+    """
+    Convert an nltk Tree to postfix notation.
+    
+    Args:
+    t (nltk.Tree): The input tree.
+    
+    Returns:
+    str: The postfix notation of the tree.
+    """
+    if isinstance(t, nltk.Tree):
+        children_postfix = [tree2postfix(child) for child in t]
+        return '(' + ' '.join(children_postfix) + ' ' + t.label() + ')'
+    else:
+        return t

@@ -1,10 +1,15 @@
 """ domain knowledge for SCAN
 """
+from collections import OrderedDict
+import os
+import json
+import nltk
+from tqdm import tqdm
 import random
 from torch.utils.data import Dataset
 
 from .build import DATASET_REGISTRY
-from .helper import Program, generate_cot
+from .helper import Program, generate_cot, index_tree, tree2postfix
 
 @DATASET_REGISTRY.register()
 class SCAN(Dataset):
@@ -19,85 +24,107 @@ class SCAN(Dataset):
     vocab_input = action_word + dir_word + turn_times_word + times_word + connect_word
     vocab_output = ['', 'I_WALK', 'I_LOOK', 'I_RUN', 'I_JUMP', 'I_TURN_LEFT', 'I_TURN_RIGHT']
 
-    op2precedence = {}
-    op2precedence.update({x: 1 for x in connect_word})
-    op2precedence.update({x: 2 for x in times_word})
-    op2precedence.update({x: 3 for x in turn_times_word})
-    op2precedence.update({x: 4 for x in dir_word})
+    input2output = {'left': 'I_TURN_LEFT', 'right': 'I_TURN_RIGHT', 
+    'turn': 'NULL', 'walk': 'I_WALK', 'look': 'I_LOOK', 'run': 'I_RUN', 'jump': 'I_JUMP'}
 
-    op2precedence = {}
-    op2precedence.update({x: 1 for x in connect_word})
-    op2precedence.update({x: 2 for x in times_word})
-    op2precedence.update({x: 3 for x in turn_times_word})
-    op2precedence.update({x: 4 for x in dir_word})
-
-    
-    sym2prog = {
-        'turn': Program(lambda: ()),
-        'walk': Program(lambda: (1,)),
-        'look': Program(lambda: (2,)),
-        'run': Program(lambda: (3,)),
-        'jump': Program(lambda: (4,)),
-
-        'left': Program(lambda x: (5,) + x),
-        'right': Program(lambda x: (6,) + x),
-
-        'opposite': Program(lambda x: (x[0],) + x),
-        'around': Program(lambda x: x * 4),
-
-        'twice': Program(lambda x: x * 2),
-        'thrice': Program(lambda x: x * 3),
-
-        'and': Program(lambda x, y: x + y),
-        'after': Program(lambda x, y: y + x),
-    }
-    
-    sym2arity = {k: v.arity for k, v in sym2prog.items()}
+    grammar = nltk.CFG.fromstring('''
+    S -> VP | VP 'and' VP | VP 'after' VP
+    VP -> VP 'twice' | VP 'thrice'
+    VP -> V | V N | V 'around' N | V 'opposite' N
+    V -> 'turn' | 'walk' | 'look' | 'run' | 'jump'
+    N -> 'left' | 'right'
+    ''')
+    parser = nltk.ChartParser(grammar)
 
 
     @classmethod
     def parse(cls, input):
-        sym2arity = cls.sym2arity
-        op2precedence = cls.op2precedence
-        values = []
-        operators = []
+        if not isinstance(input, list):
+            input = input.split()
+        tree = cls.parser.parse(input)
+        tree = list(tree)[0]
+        tree = index_tree(tree)
+        return tree
+
+    @classmethod
+    def reasoning_steps(cls, tree):
+        """
+        Given a tree, return a list of reasoning steps.
+        """
+        steps = []
+
+        def _reasoning_steps(tree):
+            if not isinstance(tree, nltk.Tree):
+                return
+
+            for child in tree:
+                _reasoning_steps(child)
+
+            node_type = tree.label().split('_')[0]
+            if node_type in ['V', 'N']:
+                result = cls.input2output[tree[0]]
+            elif node_type == 'VP':
+                if len(tree) == 1: # VP -> V
+                    result = tree[0].label()
+                elif tree[1] == 'twice': # VP -> VP 'twice'
+                    result = ' '.join([tree[0].label()]*2)
+                elif tree[1] == 'thrice': # VP -> VP 'thrice'
+                    result = ' '.join([tree[0].label()]*3)
+                elif tree[1] == 'around': # VP -> V 'around' N
+                    result = ' '.join([tree[2].label(), tree[0].label()]*4)
+                elif tree[1] == 'opposite': # VP -> V 'opposite' N
+                    result = ' '.join([tree[2].label(), tree[2].label(), tree[0].label()])
+                else: # VP -> V N
+                    result = ' '.join([tree[1].label(), tree[0].label()])
+            elif node_type == 'S':
+                if len(tree) == 1: # S -> VP:
+                    result = tree[0].label()
+                elif tree[1] == 'and': # S -> VP 'and' VP
+                    result = ' '.join([tree[0].label(), tree[2].label()])
+                elif tree[1] == 'after': # S -> VP 'after' VP
+                    result = ' '.join([tree[2].label(), tree[0].label()])
+            
+            step = (tree.label(), result)
+            steps.append(step)
         
-        head = [-1] * len(input)
-        for (i,sym) in enumerate(input):
-            if sym2arity[sym] == 0:
-                values.append(i)
-            else:
-                while len(operators) > 0 and op2precedence[input[operators[-1]]] >= op2precedence[sym]:
-                    op = operators.pop()
-                    for _ in range(sym2arity[input[op]]):
-                        head[values.pop()] = op
-                    values.append(op)
-                operators.append(i)
-
-        while len(operators) > 0:
-            op = operators.pop()
-            for _ in range(sym2arity[input[op]]):
-                head[values.pop()] = op
-            values.append(op)
-
-        root_op = values.pop()
-        head[root_op] = -1
-        assert len(values) == 0
-
-        return head
+        _reasoning_steps(tree)
+        return steps
     
     @classmethod
+    def reasoning_results(cls, steps):
+        """
+        Given a list of reasoning steps, return a list of reasoning results.
+        """
+        results = OrderedDict()
+        for input, output in steps:
+            for tok in output.split():
+                if tok in results:
+                    output = output.replace(tok, results[tok])
+            results[input] = output
+        return list(results.items())
+
+    @classmethod
     def load_data(cls, filename):
+        processed_dataset_file = filename + '.processed.json'
+        if os.path.exists(processed_dataset_file):
+            dataset = json.load(open(processed_dataset_file, 'r'))
+            return dataset
+
         with open(filename, 'r') as f:
             lines = f.readlines()
         dataset = []
-        for line in lines:
+        for line in tqdm(lines):
             _, left, right = line.split(':')
             left = left.strip().split()[:-1]
-            head = cls.parse(left)
             right = right.strip().split()
-            data = {'input': left, 'head': head, 'output': right}
+            data = {'input': left, 'output': right}
+            tree = cls.parse(left)
+            reasoning_steps = cls.reasoning_steps(tree)
+            reasoning_results = cls.reasoning_results(reasoning_steps)
+            assert [x for x in reasoning_results[-1][1].split() if x != 'NULL'] == right, "The last reasoning result is not equal to the output!"
+            data.update({'tree': tree2postfix(tree), 'reasoning_steps': reasoning_steps, 'reasoning_results': reasoning_results})
             dataset.append(data)
+        json.dump(dataset, open(processed_dataset_file, 'w'))
         return dataset
 
     def __init__(self, cfg, split='train'):
@@ -118,9 +145,6 @@ class SCAN(Dataset):
             assert False, f'Unknown split for SCAN: {subset}'
         
         dataset = self.load_data(filename)
-
-        if cfg.use_cot:
-            dataset = generate_cot(dataset, self.sym2prog, self.vocab_output)
 
         if n_sample:
             if n_sample <= 1: # it is percentage
