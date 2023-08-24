@@ -31,7 +31,7 @@ solver:
   gradient_accumulation_steps: 1
   grad_norm: 5.0
   epochs: 50
-  epochs_per_eval: 0
+  epochs_per_eval: 10
   epochs_per_save: 0
   optim:
     name: AdamW
