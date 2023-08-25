@@ -3,6 +3,7 @@ datasets
 wandb
 .vscode
 multirun
+*.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
