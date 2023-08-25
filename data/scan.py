@@ -25,7 +25,7 @@ class SCAN(Dataset):
     vocab_output = ['', 'I_WALK', 'I_LOOK', 'I_RUN', 'I_JUMP', 'I_TURN_LEFT', 'I_TURN_RIGHT']
 
     input2output = {'left': 'I_TURN_LEFT', 'right': 'I_TURN_RIGHT', 
-    'turn': 'NULL', 'walk': 'I_WALK', 'look': 'I_LOOK', 'run': 'I_RUN', 'jump': 'I_JUMP'}
+    'turn': 'I_TURN', 'walk': 'I_WALK', 'look': 'I_LOOK', 'run': 'I_RUN', 'jump': 'I_JUMP'}
 
     grammar = nltk.CFG.fromstring('''
     S -> VP | VP 'and' VP | VP 'after' VP
@@ -121,7 +121,7 @@ class SCAN(Dataset):
             tree = cls.parse(left)
             reasoning_steps = cls.reasoning_steps(tree)
             reasoning_results = cls.reasoning_results(reasoning_steps)
-            assert [x for x in reasoning_results[-1][1].split() if x != 'NULL'] == right, "The last reasoning result is not equal to the output!"
+            assert [x for x in reasoning_results[-1][1].split() if x != cls.input2output['turn']] == right, "The last reasoning result is not equal to the output!"
             data.update({'tree': tree2postfix(tree), 'reasoning_steps': reasoning_steps, 'reasoning_results': reasoning_results})
             dataset.append(data)
         json.dump(dataset, open(processed_dataset_file, 'w'))
