@@ -20,12 +20,14 @@ debug:
 
 trainer: BaseTrainer
 
-process_supervision: rir
+input_types: input
+output_types: output
 dataset_wrapper: T5Wrapper
 dataloader:
   # This is a per-gpu batch_size
   batch_size: 32
   num_workers: 2
+  #  eval_batch_size: 32
 
 solver:
   gradient_accumulation_steps: 1

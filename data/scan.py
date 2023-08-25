@@ -47,18 +47,18 @@ class SCAN(Dataset):
         return tree
 
     @classmethod
-    def reasoning_steps(cls, tree):
+    def generate_steps(cls, tree):
         """
         Given a tree, return a list of reasoning steps.
         """
         steps = []
 
-        def _reasoning_steps(tree):
+        def _steps(tree):
             if not isinstance(tree, nltk.Tree):
                 return
 
             for child in tree:
-                _reasoning_steps(child)
+                _steps(child)
 
             node_type = tree.label().split('_')[0]
             if node_type in ['V', 'N']:
@@ -87,11 +87,11 @@ class SCAN(Dataset):
             step = (tree.label(), result)
             steps.append(step)
         
-        _reasoning_steps(tree)
+        _steps(tree)
         return steps
     
     @classmethod
-    def reasoning_results(cls, steps):
+    def generate_results(cls, steps):
         """
         Given a list of reasoning steps, return a list of reasoning results.
         """
@@ -119,11 +119,11 @@ class SCAN(Dataset):
             right = right.strip().split()
             data = {'input': left, 'output': right}
             tree = cls.parse(left)
-            reasoning_steps = cls.reasoning_steps(tree)
-            reasoning_results = cls.reasoning_results(reasoning_steps)
-            assert [x for x in reasoning_results[-1][1].split() if x not in ['(', ')', cls.input2output['turn']]] == right, "The last reasoning result is not equal to the output!"
-            data.update({'tree': tree2postfix(tree), 'reasoning_steps': reasoning_steps, 'reasoning_results': reasoning_results})
-            rir = reasoning_results[-1][1] # reversible intermediate representation
+            steps = cls.generate_steps(tree)
+            results = cls.generate_results(steps)
+            assert [x for x in results[-1][1].split() if x not in ['(', ')', cls.input2output['turn']]] == right, "The last reasoning result is not equal to the output!"
+            data.update({'tree': tree2postfix(tree), 'steps': steps, 'results': results})
+            rir = results[-1][1] # reversible intermediate representation
             data.update({'rir': rir})
             dataset.append(data)
         json.dump(dataset, open(processed_dataset_file, 'w'))

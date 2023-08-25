@@ -86,7 +86,8 @@ class T5Wrapper(Dataset):
     def __init__(self, cfg, dataset):
         self.dataset = dataset
         self.tokenizer = T5Tokenizer.from_pretrained("t5-small")
-        self.process_supervision = getattr(cfg, 'process_supervision', 'none')
+        self.input_types = getattr(cfg, 'input_types', 'input').split('-')
+        self.output_types = getattr(cfg, 'output_types', 'output').split('-')
 
     def __len__(self):
         return len(self.dataset)
@@ -95,49 +96,41 @@ class T5Wrapper(Dataset):
         return self.dataset[index]
 
     def collate_fn(self, batch):
-        max_source_length = 1000
-        max_target_length = 1000
-        task_prefix = "translate instruction to actions: "
-        
-        input_sequences = [task_prefix + ' '.join(sample['input']) for sample in batch]
-        encoding = self.tokenizer(
-            input_sequences,
-            padding="longest",
-            max_length=max_source_length,
-            truncation=True,
-            return_tensors="pt",
-        )
-        input_ids, input_masks = encoding.input_ids, encoding.attention_mask
 
-        if self.process_supervision == 'none':
-            output_sequences = [' '.join(sample['output']) for sample in batch]
-        elif self.process_supervision == 'rir':
-            output_sequences = [sample['rir'] for sample in batch]
-        elif self.process_supervision == 'full':
-            output_sequences = []
-            delimiter = ' ; '
+        def tokenize_batch(types, delimiter=' . '):
+            sequences = []
             for sample in batch:
-                output = 'Tree: ' + sample['tree']
-                output += delimiter
-                output += 'Steps: ' + ' , '.join([f'{i} = {o}' for i, o in sample['reasoning_steps']])
-                output += delimiter
-                output += 'Results: ' + ' , '.join([f'{i} = {o}' for i, o in sample['reasoning_results']])
-                output += delimiter
-                output += 'Output: ' + ' '.join(sample['output'])
-                output_sequences.append(output)
-        else:
-            assert False, f'Unknown supervision type: {self.process_supervision}'
+                seq = ''
+                for tp in types:
+                    if tp == 'input':
+                        seq += 'input: ' + ' '.join(sample['input'])
+                    elif tp == 'tree':
+                        seq += 'tree: ' + sample['tree']
+                    elif tp == 'steps':
+                        seq += 'steps: ' + ' , '.join([f'{i} = {o}' for i, o in sample['steps']])
+                    elif tp == 'results':
+                        seq += 'results: ' + ' , '.join([f'{i} = {o}' for i, o in sample['results']])
+                    elif tp == 'rir':
+                        seq += 'rir: ' + sample['rir']
+                    elif tp == 'output':
+                        seq += 'output: ' + ' '.join(sample['output'])
+                    else:
+                        assert False, f'Unknown type: {tp}'
+                    seq += delimiter
+                sequences.append(seq)
+            encoding = self.tokenizer(
+                sequences,
+                padding="longest",
+                truncation=False,
+                max_length=1024,
+                return_tensors="pt",
+            )
+                
+            return encoding.input_ids, encoding.attention_mask
 
-        target_encoding = self.tokenizer(
-            output_sequences,
-            padding="longest",
-            max_length=max_target_length,
-            truncation=True,
-            return_tensors="pt",
-        )
-        output_ids, output_masks = target_encoding.input_ids, target_encoding.attention_mask
+        input_ids, input_masks = tokenize_batch(self.input_types)
+        output_ids, output_masks = tokenize_batch(self.output_types)
         output_ids[output_ids == self.tokenizer.pad_token_id] = -100
-
 
         new_batch = {}
         for key in batch[0].keys():
