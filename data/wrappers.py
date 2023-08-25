@@ -86,7 +86,7 @@ class T5Wrapper(Dataset):
     def __init__(self, cfg, dataset):
         self.dataset = dataset
         self.tokenizer = T5Tokenizer.from_pretrained("t5-small")
-        self.use_cot = cfg.use_cot
+        self.process_supervision = getattr(cfg, 'process_supervision', 'none')
 
     def __len__(self):
         return len(self.dataset)
@@ -109,7 +109,11 @@ class T5Wrapper(Dataset):
         )
         input_ids, input_masks = encoding.input_ids, encoding.attention_mask
 
-        if self.use_cot:
+        if self.process_supervision == 'none':
+            output_sequences = [' '.join(sample['output']) for sample in batch]
+        elif self.process_supervision == 'rir':
+            output_sequences = [sample['rir'] for sample in batch]
+        elif self.process_supervision == 'full':
             output_sequences = []
             delimiter = ' ; '
             for sample in batch:
@@ -122,7 +126,8 @@ class T5Wrapper(Dataset):
                 output += 'Output: ' + ' '.join(sample['output'])
                 output_sequences.append(output)
         else:
-            output_sequences = [' '.join(sample['output']) for sample in batch]
+            assert False, f'Unknown supervision type: {self.process_supervision}'
+
         target_encoding = self.tokenizer(
             output_sequences,
             padding="longest",

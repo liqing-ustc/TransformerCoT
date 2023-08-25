@@ -99,7 +99,7 @@ class SCAN(Dataset):
         for input, output in steps:
             for tok in output.split():
                 if tok in results:
-                    output = output.replace(tok, results[tok])
+                    output = output.replace(tok, f' ( {results[tok]} ) ')
             results[input] = output
         return list(results.items())
 
@@ -121,8 +121,10 @@ class SCAN(Dataset):
             tree = cls.parse(left)
             reasoning_steps = cls.reasoning_steps(tree)
             reasoning_results = cls.reasoning_results(reasoning_steps)
-            assert [x for x in reasoning_results[-1][1].split() if x != cls.input2output['turn']] == right, "The last reasoning result is not equal to the output!"
+            assert [x for x in reasoning_results[-1][1].split() if x not in ['(', ')', cls.input2output['turn']]] == right, "The last reasoning result is not equal to the output!"
             data.update({'tree': tree2postfix(tree), 'reasoning_steps': reasoning_steps, 'reasoning_results': reasoning_results})
+            rir = reasoning_results[-1][1] # reversible intermediate representation
+            data.update({'rir': rir})
             dataset.append(data)
         json.dump(dataset, open(processed_dataset_file, 'w'))
         return dataset

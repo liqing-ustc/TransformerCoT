@@ -20,7 +20,7 @@ debug:
 
 trainer: BaseTrainer
 
-use_cot: False
+process_supervision: rir
 dataset_wrapper: T5Wrapper
 dataloader:
   # This is a per-gpu batch_size
