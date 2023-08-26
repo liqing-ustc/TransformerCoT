@@ -15,5 +15,4 @@ python run.py -m \
     hydra/launcher=${launcher} \
     input_types=input \
     output_types=tree \
-    debug=True \
     model.variant=t5-small dataloader.batch_size=32
