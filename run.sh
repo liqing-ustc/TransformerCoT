@@ -9,15 +9,11 @@
 #SBATCH --account=research
 #SBATCH --qos=level0
 
+launcher=${1:-"basic"} # basic for running on your local machine, slurm for running on a cluster
+
 python run.py -m \
+    hydra/launcher=${launcher} \
     input_types=rir,output \
     output_types=output \
+    debug=True \
     model.variant=t5-small dataloader.batch_size=32
-
-# python run.py -m \
-#     rng_seed=1,2,3 \
-#     use_cot=True \
-#     dataset.subset=length \
-#     model.position_embedding_type=relative_key \
-#     model.distance_clip=10 \
-#     solver.epochs_per_eval=10 solver.epochs=100
