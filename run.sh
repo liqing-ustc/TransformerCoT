@@ -13,7 +13,7 @@ launcher=${1:-"basic"} # basic for running on your local machine, slurm for runn
 
 python run.py -m \
     hydra/launcher=${launcher} \
-    input_types=rir,output \
-    output_types=output \
+    input_types=input \
+    output_types=tree \
     debug=True \
     model.variant=t5-small dataloader.batch_size=32
