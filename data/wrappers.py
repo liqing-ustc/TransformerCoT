@@ -111,7 +111,7 @@ class T5Wrapper(Dataset):
                     elif tp == 'results':
                         seq += 'results: ' + ' , '.join([f'{i} = {o}' for i, o in sample['results']])
                     elif tp == 'rir':
-                        seq += 'rir: ' + sample['rir']
+                        seq += 'intermediate: ' + sample['rir']
                     elif tp == 'output':
                         seq += 'output: ' + ' '.join(sample['output'])
                     else:

@@ -14,9 +14,7 @@ num_gpu: 1
 logger:
   name: "wandb"
 
-debug:
-  flag: False
-  debug_size: 20
+debug: False
 
 trainer: BaseTrainer
 

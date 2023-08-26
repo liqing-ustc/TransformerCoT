@@ -99,7 +99,7 @@ class SCAN(Dataset):
         for input, output in steps:
             for tok in output.split():
                 if tok in results:
-                    output = output.replace(tok, f' ( {results[tok]} ) ')
+                    output = output.replace(tok, f'( {results[tok]} )')
             results[input] = output
         return list(results.items())
 

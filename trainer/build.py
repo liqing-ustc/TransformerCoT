@@ -46,7 +46,7 @@ class Tracker():
 class BaseTrainer():
     def __init__(self, cfg):
         set_seed(cfg.rng_seed)
-        self.debug = cfg.debug.flag
+        self.debug = cfg.debug
         self.epochs_per_eval = cfg.solver.get("epochs_per_eval", None)
         self.epochs_per_save = cfg.solver.get("epochs_per_save", None)
         self.global_step = 0
@@ -68,7 +68,7 @@ class BaseTrainer():
         )
 
         self.accelerator.init_trackers(
-                project_name=cfg.name,
+                project_name=cfg.name if not self.debug else "Debug",
                 config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
                 init_kwargs={
                     "wandb": {

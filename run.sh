@@ -10,9 +10,9 @@
 #SBATCH --qos=level0
 
 python run.py -m \
-    input_types=input,rir,output \
-    output_types=input,rir,output \
-    model.variant=t5-small dataloader.batch_size=128
+    input_types=rir,output \
+    output_types=output \
+    model.variant=t5-small dataloader.batch_size=32
 
 # python run.py -m \
 #     rng_seed=1,2,3 \
