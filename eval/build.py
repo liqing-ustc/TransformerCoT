@@ -16,7 +16,8 @@ class BaseEvaluator():
         self.best_result = -np.inf
 
     def batch_metrics(self, data_dict):
-        return {}
+        data_dict['preds'] = data_dict['logits'].argmax(dim=-1)
+        return self.batch_metrics_for_generation(data_dict)
 
     def batch_metrics_for_generation(self, data_dict):
         output_ids = data_dict['output_ids']
