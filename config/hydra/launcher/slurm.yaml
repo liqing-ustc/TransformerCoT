@@ -5,7 +5,7 @@ nodes: 1                # node count
 tasks_per_node: 1       # total number of tasks per node
 cpus_per_task: 8        # cpu-cores per task (>1 if multi-threaded tasks)
 gres: gpu:1             # number of gpus per node
-timeout_min: 600        # total run time limit in minutes
+timeout_min: 1440       # total run time limit in minutes (24h in this case)
 partition: gpu
 account: research
 qos: level0
