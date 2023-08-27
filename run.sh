@@ -14,6 +14,6 @@ launcher=${1:-"basic"} # basic for running on your local machine, slurm for runn
 python run.py -m \
     hydra/launcher=${launcher} \
     dataset=CFQ dataset.subset=mcd1 \
-    input_types=input \
-    output_types=rir,output \
+    input_types=rir \
+    output_types=output \
     model.variant=t5-small dataloader.batch_size=32
