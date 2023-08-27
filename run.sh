@@ -15,5 +15,5 @@ python run.py -m \
     hydra/launcher=${launcher} \
     dataset=CFQ dataset.subset=mcd1 \
     input_types=input \
-    output_types=rir,output \
+    output_types=rir \
     model.variant=t5-base dataloader.batch_size=32
