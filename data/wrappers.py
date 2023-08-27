@@ -117,7 +117,6 @@ class T5Wrapper(Dataset):
                     else:
                         assert False, f'Unknown type: {tp}'
                     seq += delimiter
-                seq.replace('{', '(').replace('}', ')') # T5 tokenzier does not support { and }
                 sequences.append(seq)
             encoding = self.tokenizer(
                 sequences,
@@ -126,7 +125,7 @@ class T5Wrapper(Dataset):
                 max_length=1024,
                 return_tensors="pt",
             )
-                
+            assert self.tokenizer.unk_token_id not in encoding.input_ids, 'Some tokens are not recognized by the tokenizer!'
             return encoding.input_ids, encoding.attention_mask
 
         input_ids, input_masks = tokenize_batch(self.input_types)

@@ -124,9 +124,10 @@ class SPARQL():
         """Parses a SPARQL query into a prefix and conditions."""
         query = cls.trim_predicate(query)
         query = query.lower().replace("\n", " ")
+        query = query.replace('{', 'lb').replace('}', 'rb').replace('^', '#') # Some tokenzier (T5) does not support { } ^, replace them with lb rb #.
         # Remove the closing bracket and split on opening bracket.
-        assert query.endswith(" }"), f"Missing closing bracket: {query}"
-        parts = query.replace(" }", "").split(" { ")
+        assert query.endswith(" rb"), f"Missing closing bracket: {query}"
+        parts = query.replace(" rb", "").split(" lb ")
         assert len(parts) == 2, f"Invalid query: {query}" 
         prefix = parts[0].strip()
         conditions = [c.split() for c in parts[1].split(" . ") if not c.startswith("filter")]
