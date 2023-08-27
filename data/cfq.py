@@ -200,6 +200,7 @@ class SPARQL():
             obj = ','.join(obj) if isinstance(obj, list) else obj
             condition = f'(({subj}) ({rel}) ({obj}))'
             conditions.append(condition)
+        conditions.sort()
         conditions = ' ; '.join(conditions)
 
         rir = f'({prefix}) ({conditions})'
