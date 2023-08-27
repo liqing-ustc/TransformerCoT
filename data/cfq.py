@@ -55,7 +55,7 @@ def convert_grammar_rules(original_grammar_rules):
     # print(terminal_mapping)
     return new_grammar_rules, nonterminal_mapping, terminal_mapping
 
-def parse_tree(sentence, grammar_rules):
+def parse(sentence, grammar_rules):
     grammar_rules, _, terminal_mapping = convert_grammar_rules(grammar_rules)
     # for rule in grammar_rules:
     #     print(rule)
@@ -190,18 +190,18 @@ class SPARQL():
     def to_rir(self):
         prefix = self.prefix
 
-        # ( s ( r_1 , r_2 ... ) ( o_1 , o_2 ... ) )
+        # (s (r_1,r_2 ...) (o_1,o_2...) )
         conditions = []
         for condition in self.merged_conditions:
             subj, rel, obj = condition
-            subj = ' , '.join(subj) if isinstance(subj, list) else subj
-            rel = ' , '.join(rel) if isinstance(rel, list) else rel
-            obj = ' , '.join(obj) if isinstance(obj, list) else obj
-            condition = f'( ( {subj} ) ( {rel} ) ( {obj} ) )'
+            subj = ','.join(subj) if isinstance(subj, list) else subj
+            rel = ','.join(rel) if isinstance(rel, list) else rel
+            obj = ','.join(obj) if isinstance(obj, list) else obj
+            condition = f'(({subj}) ({rel}) ({obj}))'
             conditions.append(condition)
         conditions = ' ; '.join(conditions)
 
-        rir = f'( {prefix} ) ( {conditions} )'
+        rir = f'({prefix}) ({conditions})'
         return rir
 
 
@@ -224,7 +224,7 @@ class CFQ(Dataset):
             question = sample['questionPatternModEntities']
             grammar_rules = [x['stringValue'] for x in sample['ruleIds'] if x['type'] == 'GRAMMAR_RULE']
             query = sample['sparqlPatternModEntities']
-            tree, question = parse_tree(question, grammar_rules)
+            tree, question = parse(question, grammar_rules)
             tree = compress_tree(tree)
             tree = index_tree(tree)
             query = SPARQL.parse(query)

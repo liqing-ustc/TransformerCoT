@@ -103,7 +103,7 @@ class T5Wrapper(Dataset):
                 seq = ''
                 for tp in types:
                     if tp == 'input':
-                        seq += 'input: ' + ' '.join(sample['input'])
+                        seq += 'input: ' + (sample['input'] if isinstance(sample['input'], str) else ' '.join(sample['input']))
                     elif tp == 'tree':
                         seq += 'tree: ' + sample['tree']
                     elif tp == 'steps':
@@ -113,10 +113,11 @@ class T5Wrapper(Dataset):
                     elif tp == 'rir':
                         seq += 'intermediate: ' + sample['rir']
                     elif tp == 'output':
-                        seq += 'output: ' + ' '.join(sample['output'])
+                        seq += 'output: ' + (sample['output'] if isinstance(sample['output'], str) else ' '.join(sample['output']))
                     else:
                         assert False, f'Unknown type: {tp}'
                     seq += delimiter
+                seq.replace('{', '(').replace('}', ')') # T5 tokenzier does not support { and }
                 sequences.append(seq)
             encoding = self.tokenizer(
                 sequences,
