@@ -138,3 +138,15 @@ def tree2postfix(t):
         return '(' + ' '.join(children_postfix) + ' ' + t.label() + ')'
     else:
         return t
+
+def compress_tree(tree):
+    if isinstance(tree, nltk.Tree):
+        # If the current node has only one child, replace it by its child
+        while len(tree) == 1 and isinstance(tree[0], nltk.Tree):
+            tree.set_label(tree[0].label())
+            tree[0:] = tree[0]
+        
+        # Recursively process the children of the current node
+        for child in tree:
+            compress_tree(child)
+    return tree
