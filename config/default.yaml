@@ -38,9 +38,9 @@ solver:
     args:
       lr: 1e-3
   sched:
-    name: warmup_cosine
-    args:
-      warmup_steps: 100
+    name: constant
+    # args:
+    #   warmup_steps: 100
 
 eval:
   name: BaseEvaluator
