@@ -97,7 +97,7 @@ class T5Wrapper(Dataset):
 
     def collate_fn(self, batch):
 
-        def tokenize_batch(types, delimiter=' . '):
+        def tokenize_batch(types, delimiter=' ; '):
             sequences = []
             for sample in batch:
                 seq = ''

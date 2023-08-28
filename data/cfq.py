@@ -203,7 +203,7 @@ class SPARQL():
             condition = f'(({subj}) ({rel}) ({obj}))'
             conditions.append(condition)
         conditions.sort()
-        conditions = ' ; '.join(conditions)
+        conditions = ' . '.join(conditions)
 
         rir = f'({prefix}) ({conditions})'
         return rir
