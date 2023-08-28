@@ -130,7 +130,9 @@ class SPARQL():
         parts = query.replace(" rb", "").split(" lb ")
         assert len(parts) == 2, f"Invalid query: {query}" 
         prefix = parts[0].strip()
-        conditions = [c.split() for c in parts[1].split(" . ") if not c.startswith("filter")]
+        conditions = [c for c in parts[1].split(" . ") if not c.startswith("filter")]
+        conditions = sorted(list(set(conditions)))
+        conditions = [c.split() for c in conditions]
         # (Drozdov et al., 2023) We strip FILTER statements because they always appear with the “sibling of” and “married to” properties, and would be trivial to add to the output after prediction (i.e., they can be considered to be part of the abbreviated property). For example, if “?x0 married to M0” appeared then so would “FILTER(?x0 != M0)”.   Essentially,  one can not be married to themselves, nor a sibling of themselves.
         return cls(query, prefix, conditions)
 
@@ -205,6 +207,9 @@ class SPARQL():
 
         rir = f'({prefix}) ({conditions})'
         return rir
+    
+    def __eq__(self, other):
+        return (self.prefix == other.prefix) and (self.conditions == other.conditions)
 
 
 @DATASET_REGISTRY.register()

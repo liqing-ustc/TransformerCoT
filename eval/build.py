@@ -9,8 +9,9 @@ def compute_accuracy(preds, targets, ignore_index=-1):
 
 @EVALUATOR_REGISTRY.register()
 class BaseEvaluator():
-    def __init__(self, cfg, accelerator):
+    def __init__(self, cfg, accelerator, tokenizer=None):
         self.target_metric = cfg.eval.get('target_metric', 'acc')
+        self.tokenizer = tokenizer
         self.total_count = 0
         self.eval_dict = {'acc': [], 'token_acc': []}
         self.best_result = -np.inf
@@ -55,5 +56,5 @@ class BaseEvaluator():
             self.eval_dict[key] = []
         self.total_count = 0
 
-def build_eval(cfg, accelerator):
-    return EVALUATOR_REGISTRY.get(cfg.eval.name)(cfg, accelerator)
+def build_eval(cfg, accelerator, tokenizer):
+    return EVALUATOR_REGISTRY.get(cfg.eval.name)(cfg, accelerator, tokenizer)

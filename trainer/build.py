@@ -81,13 +81,14 @@ class BaseTrainer():
             
         keys = ["train", "val", "test"]
         self.data_loaders = {key : build_dataloader(cfg, split=key) for key in keys}
-        if hasattr(self.data_loaders["train"].dataset.tokenizer, "vocab"):
-            cfg.model.vocab_size = len(self.data_loaders["train"].dataset.tokenizer.vocab)
+        tokenizer = self.data_loaders["train"].dataset.tokenizer
+        if hasattr(tokenizer, "vocab"):
+            cfg.model.vocab_size = len(tokenizer.vocab)
             self.logger.info(f"Updating vocab size: {cfg.model.vocab_size}")
         self.model = build_model(cfg)
         self.optimizer, self.scheduler = build_optim(cfg, self.model.get_opt_params(),
                                                      total_steps=len(self.data_loaders["train"]) * cfg.solver.epochs)
-        self.evaluator = build_eval(cfg, self.accelerator)
+        self.evaluator = build_eval(cfg, self.accelerator, tokenizer=tokenizer)
 
         # Training details
         self.epochs = cfg.solver.epochs
