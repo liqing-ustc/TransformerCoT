@@ -15,7 +15,7 @@ python run.py -m \
     hydra/launcher=${launcher} \
     dataset=CFQ dataset.subset=mcd1 \
     input_types=input \
-    output_types=rir \
+    output_types=output \
     model.variant=t5-small \
     solver.optim.args.lr=1e-4,5e-4,1e-3,5e-3 \
     dataloader.batch_size=32 solver.gradient_accumulation_steps=4
