@@ -81,7 +81,6 @@ class BaseTrainer():
             
         # Training details
         self.epochs = cfg.solver.epochs
-        self.total_steps = len(self.data_loaders["train"]) * cfg.solver.epochs // cfg.solver.get("gradient_accumulation_steps", 1)
         self.grad_norm = cfg.solver.get("grad_norm")
 
         keys = ["train", "val", "test"]
@@ -91,8 +90,8 @@ class BaseTrainer():
             cfg.model.vocab_size = len(tokenizer.vocab)
             self.logger.info(f"Updating vocab size: {cfg.model.vocab_size}")
         self.model = build_model(cfg)
-        self.optimizer, self.scheduler = build_optim(cfg, self.model.get_opt_params(),
-                                                     total_steps=self.total_steps)
+        total_optim_steps = len(self.data_loaders["train"]) * cfg.solver.epochs // cfg.solver.get("gradient_accumulation_steps", 1)
+        self.optimizer, self.scheduler = build_optim(cfg, self.model.get_opt_params(), total_steps=total_optim_steps)
         self.evaluator = build_eval(cfg, self.accelerator, tokenizer=tokenizer)
 
 
