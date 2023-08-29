@@ -72,8 +72,7 @@ class BaseTrainer():
                 config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
                 init_kwargs={
                     "wandb": {
-                        "name": self.exp_tracker.exp_name,
-                        "id": self.exp_tracker.run_id, "resume": True
+                        "id": self.exp_tracker.run_id, "resume": cfg.resume
                     }
                 }
             )
