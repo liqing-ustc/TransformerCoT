@@ -81,7 +81,7 @@ class BaseTrainer():
             
         # Training details
         self.epochs = cfg.solver.epochs
-        self.total_steps = len(self.data_loaders["train"]) * cfg.solver.epochs / cfg.solver.get("gradient_accumulation_steps", 1)
+        self.total_steps = len(self.data_loaders["train"]) * cfg.solver.epochs // cfg.solver.get("gradient_accumulation_steps", 1)
         self.grad_norm = cfg.solver.get("grad_norm")
 
         keys = ["train", "val", "test"]
