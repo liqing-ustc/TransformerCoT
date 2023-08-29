@@ -79,6 +79,11 @@ class BaseTrainer():
             )
         print(OmegaConf.to_yaml(cfg))
             
+        # Training details
+        self.epochs = cfg.solver.epochs
+        self.total_steps = len(self.data_loaders["train"]) * cfg.solver.epochs / cfg.solver.get("gradient_accumulation_steps", 1)
+        self.grad_norm = cfg.solver.get("grad_norm")
+
         keys = ["train", "val", "test"]
         self.data_loaders = {key : build_dataloader(cfg, split=key) for key in keys}
         tokenizer = self.data_loaders["train"].dataset.tokenizer
@@ -87,13 +92,9 @@ class BaseTrainer():
             self.logger.info(f"Updating vocab size: {cfg.model.vocab_size}")
         self.model = build_model(cfg)
         self.optimizer, self.scheduler = build_optim(cfg, self.model.get_opt_params(),
-                                                     total_steps=len(self.data_loaders["train"]) * cfg.solver.epochs)
+                                                     total_steps=self.total_steps)
         self.evaluator = build_eval(cfg, self.accelerator, tokenizer=tokenizer)
 
-        # Training details
-        self.epochs = cfg.solver.epochs
-        self.total_steps = len(self.data_loaders["train"]) * cfg.solver.epochs
-        self.grad_norm = cfg.solver.get("grad_norm")
 
         # Load pretrain model weights
         if cfg.get('pretrain_ckpt_path'):
