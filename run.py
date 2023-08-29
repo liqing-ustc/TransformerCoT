@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 import hydra
 from datetime import datetime
@@ -11,8 +10,7 @@ from trainer import build_trainer
 @hydra.main(version_base=None, config_path="./config", config_name="default")
 def main(cfg):
     if not cfg.exp_dir:
-        argv = sys.argv[1:]
-        exp_name = '_'.join(argv + [f"{datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}"])
+        exp_name = f"{datetime.now().strftime('%Y-%m-%d-%H:%M:%S.%f')}"
         cfg.exp_dir = cfg.base_dir + '/' + exp_name
         
     make_dir(cfg.exp_dir)
