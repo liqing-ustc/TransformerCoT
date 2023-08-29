@@ -19,4 +19,4 @@ python run.py -m \
     output_types=output \
     model.variant=t5-small \
     solver.optim.args.lr=1e-3 \
-    model.weight_decay=0.01 
+    model.weight_decay=1e-2,5e-3,1e-3 \ 
