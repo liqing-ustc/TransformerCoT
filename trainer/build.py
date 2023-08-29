@@ -202,15 +202,14 @@ class BaseTrainer():
         self.accelerator.end_training()
 
     def log(self, results, mode="train"):
-        if not self.debug:
-            log_dict = {}
-            for key, val in results.items():
-                log_dict[f"{mode}/{key}"] = val
-            if mode == "train":
-                lrs = self.scheduler.get_lr()
-                for i, lr in enumerate(lrs):
-                    log_dict[f"{mode}/lr/group_{i}"] = lr
-            self.accelerator.log(log_dict, step=self.global_step)
+        log_dict = {}
+        for key, val in results.items():
+            log_dict[f"{mode}/{key}"] = val
+        if mode == "train":
+            lrs = self.scheduler.get_lr()
+            for i, lr in enumerate(lrs):
+                log_dict[f"{mode}/lr/group_{i}"] = lr
+        self.accelerator.log(log_dict, step=self.global_step)
 
     def save(self, name):
         make_dir(self.ckpt_path.parent)
