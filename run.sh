@@ -17,5 +17,5 @@ python run.py -m \
     input_types=input \
     output_types=output \
     model.variant=t5-small \
-    solver.optim.args.lr=1e-4,5e-4,1e-3,5e-3 \
+    solver.optim.args.lr=1e-4,5e-4,1e-3 \
     dataloader.batch_size=32 solver.gradient_accumulation_steps=4
