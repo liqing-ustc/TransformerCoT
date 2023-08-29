@@ -14,8 +14,9 @@ launcher=${1:-"basic"} # basic for running on your local machine, slurm for runn
 python run.py -m \
     hydra/launcher=${launcher} \
     dataset=CFQ dataset.subset=mcd1 \
+    dataloader.batch_size=32 solver.gradient_accumulation_steps=4 \
     input_types=input \
     output_types=output \
     model.variant=t5-small \
-    solver.optim.args.lr=1e-4,5e-4,1e-3 \
-    dataloader.batch_size=32 solver.gradient_accumulation_steps=4
+    solver.optim.args.lr=1e-3 \
+    model.weight_decay=0.01 
