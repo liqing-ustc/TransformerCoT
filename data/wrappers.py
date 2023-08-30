@@ -85,7 +85,7 @@ class GPTWrapper(Dataset):
 class T5Wrapper(Dataset):
     def __init__(self, cfg, dataset):
         self.dataset = dataset
-        self.tokenizer = T5Tokenizer.from_pretrained("t5-small")
+        self.tokenizer = T5Tokenizer.from_pretrained(cfg.model.variant)
         self.input_types = getattr(cfg, 'input_types', 'input').split('-')
         self.output_types = getattr(cfg, 'output_types', 'output').split('-')
 
