@@ -110,7 +110,7 @@ class SPARQL():
         self.query = query
         self.prefix = prefix
         self.conditions = conditions
-        self.merged_conditions = self.merge_conditions(conditions)
+        self.grouped_conditions = self.group_conditions(conditions)
 
     @classmethod
     def trim_predicate(cls, query):
@@ -137,7 +137,7 @@ class SPARQL():
         return cls(query, prefix, conditions)
 
     @classmethod
-    def merge_conditions(cls, conditions):
+    def group_conditions(cls, conditions):
         # adapted from https://github.com/google-research/language/blob/master/language/compir/dataset_parsers/cfq_parser.py 
         def get_subj_rel_to_objects(conditions):
             """Merges conditions that share the same subject and relation."""
@@ -150,9 +150,9 @@ class SPARQL():
                 subj_rel_to_objects[subj_rel].append(obj)
             return subj_rel_to_objects
 
-        def get_merged_conditions(subj_rel_to_objects, subj_objs_to_rels):
-            """ merge conditions into the form of (s , (r_1, r_2 ...), (o_1 , o_2 ...))."""
-            merged_conditions = []
+        def get_grouped_conditions(subj_rel_to_objects, subj_objs_to_rels):
+            """ group conditions into the form of (s , (r_1, r_2 ...), (o_1 , o_2 ...))."""
+            grouped_conditions = []
             added_subj_objs = []
             for subj_rel, objects in subj_rel_to_objects.items():
                 subj, _ = subj_rel
@@ -162,9 +162,9 @@ class SPARQL():
                     continue
                 else:
                     added_subj_objs.append((objects_tup, subj))
-                condition_merged = [subj, subj_objs_to_rels[(objects_tup, subj)], objects]
-                merged_conditions.append(condition_merged)
-            return merged_conditions
+                condition_grouped = [subj, subj_objs_to_rels[(objects_tup, subj)], objects]
+                grouped_conditions.append(condition_grouped)
+            return grouped_conditions
         
         # Prepare subject-relation to objects map.
         subj_rel_to_objects = get_subj_rel_to_objects(conditions)
@@ -178,8 +178,8 @@ class SPARQL():
                 key = (objects_tuple, subj)
                 subj_objs_to_rels[key].append(rel)
 
-        merged_conditions = get_merged_conditions(subj_rel_to_objects, subj_objs_to_rels)
-        return merged_conditions
+        grouped_conditions = get_grouped_conditions(subj_rel_to_objects, subj_objs_to_rels)
+        return grouped_conditions
 
     def to_prompt(self):
         prompt = self.prefix + ' # prefix\n'
@@ -195,7 +195,7 @@ class SPARQL():
 
         # (s (r_1,r_2 ...) (o_1,o_2...) )
         conditions = []
-        for condition in self.merged_conditions:
+        for condition in self.grouped_conditions:
             subj, rel, obj = condition
             subj = ','.join(subj) if isinstance(subj, list) else subj
             rel = ','.join(rel) if isinstance(rel, list) else rel
