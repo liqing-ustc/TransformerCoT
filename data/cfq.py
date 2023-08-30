@@ -236,7 +236,8 @@ class CFQ(Dataset):
             query = SPARQL.parse(query)
 
             data = {'input': question, 'output': query.query,
-                    'tree': tree2postfix(tree), 'rir': query.to_rir()}
+                    'tree': tree2postfix(tree).replace('(', '( ').replace(')', ' )'), # add extra whitespace around brackets 
+                    'rir': query.to_rir()}
             dataset.append(data)
 
         json.dump(dataset, open(processed_dataset_file, 'w'))
