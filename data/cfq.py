@@ -197,12 +197,12 @@ class SPARQL():
         conditions = []
         for condition in self.grouped_conditions:
             subj, rel, obj = condition
-            subj = ','.join(subj) if isinstance(subj, list) else subj
-            rel = ','.join(rel) if isinstance(rel, list) else rel
-            obj = ','.join(obj) if isinstance(obj, list) else obj
-            condition = f'({subj} ({rel}) ({obj}))'
+            subj = ' , '.join(subj) if isinstance(subj, list) else subj
+            rel = ' , '.join(rel) if isinstance(rel, list) else rel
+            obj = ' , '.join(obj) if isinstance(obj, list) else obj
+            condition = f'( {subj} ( {rel} ) ( {obj} ) )'
             conditions.append(condition)
-        conditions = '. '.join(conditions)
+        conditions = ' . '.join(conditions)
 
         rir = f'{prefix} lb {conditions} rb'
         return rir
