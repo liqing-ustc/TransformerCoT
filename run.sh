@@ -11,6 +11,10 @@
 
 launcher=${1:-"basic"} # basic for running on your local machine, slurm for running on a cluster
 
+if [ "$launcher" == "slurm" ]; then
+    rsync_exclude desktop:/home/qingli/Desktop/TransformerCoT/ .
+fi
+
 python run.py -m \
     hydra/launcher=${launcher} \
     dataset=CFQ dataset.subset=mcd1 \
