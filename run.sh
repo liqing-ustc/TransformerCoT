@@ -12,6 +12,7 @@
 launcher=${1:-"basic"} # basic for running on your local machine, slurm for running on a cluster
 
 if [ "$launcher" == "slurm" ]; then
+    source ~/alias_command
     rsync_exclude desktop:/home/qingli/Desktop/TransformerCoT/ .
 fi
 
