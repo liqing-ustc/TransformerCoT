@@ -11,16 +11,11 @@
 
 launcher=${1:-"basic"} # basic for running on your local machine, slurm for running on a cluster
 
-if [ "$launcher" == "slurm" ]; then
-    source ~/alias_command
-    rsync_exclude desktop:/home/qingli/Desktop/TransformerCoT/ .
-fi
-
 python run.py -m \
     hydra/launcher=${launcher} \
     dataset=CFQ dataset.subset=mcd1 \
-    input_types=tree \
+    input_types=input-tree \
     output_types=rir,output \
     model.variant=t5-small \
-    solver.optim.args.lr=1e-3,5e-4 \
+    solver.optim.args.lr=5e-4 \
     dataloader.batch_size=32 solver.gradient_accumulation_steps=4
